@@ -1,0 +1,26 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/justinmarkmarshall/chatbot
+  pullPolicy: Always
+  tag: latest
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ollama:
+  baseUrl: http://ollama:11434
+  model: qwen3:1.7b
+
+httpRoute:
+  enabled: true
+  hostnames:
+    - chatbot.marshalllab.uk
+  parentRefs:
+    - name: public-gateway
+      namespace: envoy-gateway-system
+      sectionName: http
+     
+resources: {}

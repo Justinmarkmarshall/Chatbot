@@ -1,0 +1,6 @@
+apiVersion: v2
+name: chatbot
+description: Helm chart for the Ollama-backed Chatbot application
+type: application
+version: 0.1.0
+appVersion: "latest"

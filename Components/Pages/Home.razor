@@ -1,0 +1,132 @@
+@page "/"
+@using System.Net.Http.Json
+@using AIPlatform.Api.Models
+@inject HttpClient Http
+
+<PageTitle>Ollama Chat</PageTitle>
+
+<main class="chat-page">
+    <section class="chat-shell" aria-label="Ollama chat">
+        <header class="chat-header">
+            <div>
+                <p class="eyebrow">LOCAL AI</p>
+                <h1>Ollama Chat</h1>
+            </div>
+            <span class="status"><span></span> Ready</span>
+        </header>
+
+        <div class="conversation" aria-live="polite">
+            @if (messages.Count == 0)
+            {
+                <div class="welcome-message">
+                    <p class="eyebrow">START A CONVERSATION</p>
+                    <h2>What are we thinking through?</h2>
+                    <p>Your messages stay between this app and your local Ollama instance.</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var message in messages)
+                {
+                    <article class="message @message.Role">
+                        <span class="message-role">@message.Label</span>
+                        <p>@message.Content</p>
+                    </article>
+                }
+                @if (isSending)
+                {
+                    <article class="message assistant pending">
+                        <span class="message-role">OLLAMA</span>
+                        <p>Thinking<span class="dots">...</span></p>
+                    </article>
+                }
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="error" role="alert">@errorMessage</p>
+        }
+
+        <form class="composer" @onsubmit="SendAsync" @onsubmit:preventDefault>
+            <label for="message">Message</label>
+            <div class="composer-row">
+                <textarea id="message" @bind="prompt" placeholder="Ask anything..." rows="1" disabled="@isSending"></textarea>
+                <button type="submit" disabled="@(isSending || string.IsNullOrWhiteSpace(prompt))">
+                    Send <span aria-hidden="true">&#8599;</span>
+                </button>
+            </div>
+        </form>
+    </section>
+</main>
+
+@code {
+    private readonly List<ChatMessage> messages = [];
+    private string prompt = string.Empty;
+    private string? errorMessage;
+    private bool isSending;
+
+    private async Task SendAsync()
+    {
+        var message = prompt.Trim();
+        if (string.IsNullOrEmpty(message))
+        {
+            return;
+        }
+
+        messages.Add(new ChatMessage("user", "YOU") { Content = message });
+        prompt = string.Empty;
+        errorMessage = null;
+        isSending = true;
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "api/chat")
+            {
+                Content = JsonContent.Create(new ChatRequest(message))
+            };
+            using var response = await Http.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead);
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = "The chat service could not complete that request.";
+                return;
+            }
+
+            var assistantMessage = new ChatMessage("assistant", "OLLAMA");
+            messages.Add(assistantMessage);
+
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new StreamReader(stream);
+            var buffer = new char[1024];
+            int charactersRead;
+            while ((charactersRead = await reader.ReadAsync(buffer)) > 0)
+            {
+                assistantMessage.Content += new string(buffer, 0, charactersRead);
+                await InvokeAsync(StateHasChanged);
+            }
+
+            if (string.IsNullOrWhiteSpace(assistantMessage.Content))
+            {
+                messages.Remove(assistantMessage);
+                errorMessage = "The chat service returned an empty response.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Could not reach the chat service. Check that Ollama is running.";
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+
+    private sealed class ChatMessage(string role, string label)
+    {
+        public string Role { get; } = role;
+        public string Label { get; } = label;
+        public string Content { get; set; } = string.Empty;
+    }
+}
