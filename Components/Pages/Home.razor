@@ -33,13 +33,6 @@
                         <p>@message.Content</p>
                     </article>
                 }
-                @if (isSending)
-                {
-                    <article class="message assistant pending">
-                        <span class="message-role">OLLAMA</span>
-                        <p>Thinking<span class="dots">...</span></p>
-                    </article>
-                }
             }
         </div>
 
@@ -55,6 +48,10 @@
                 <button type="submit" disabled="@(isSending || string.IsNullOrWhiteSpace(prompt))">
                     Send <span aria-hidden="true">&#8599;</span>
                 </button>
+                @if (isSending)
+                {
+                    <button class="cancel-button" type="button" @onclick="Cancel">Cancel</button>
+                }
             </div>
         </form>
     </section>
@@ -65,6 +62,7 @@
     private string prompt = string.Empty;
     private string? errorMessage;
     private bool isSending;
+    private CancellationTokenSource? cancellationTokenSource;
 
     private async Task SendAsync()
     {
@@ -78,6 +76,7 @@
         prompt = string.Empty;
         errorMessage = null;
         isSending = true;
+        cancellationTokenSource = new CancellationTokenSource();
 
         try
         {
@@ -87,7 +86,8 @@
             };
             using var response = await Http.SendAsync(
                 request,
-                HttpCompletionOption.ResponseHeadersRead);
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationTokenSource.Token);
             if (!response.IsSuccessStatusCode)
             {
                 errorMessage = "The chat service could not complete that request.";
@@ -97,11 +97,11 @@
             var assistantMessage = new ChatMessage("assistant", "OLLAMA");
             messages.Add(assistantMessage);
 
-            await using var stream = await response.Content.ReadAsStreamAsync();
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationTokenSource.Token);
             using var reader = new StreamReader(stream);
             var buffer = new char[1024];
             int charactersRead;
-            while ((charactersRead = await reader.ReadAsync(buffer)) > 0)
+            while ((charactersRead = await reader.ReadAsync(buffer, cancellationTokenSource.Token)) > 0)
             {
                 assistantMessage.Content += new string(buffer, 0, charactersRead);
                 await InvokeAsync(StateHasChanged);
@@ -117,11 +117,18 @@
         {
             errorMessage = "Could not reach the chat service. Check that Ollama is running.";
         }
+        catch (OperationCanceledException)
+        {
+        }
         finally
         {
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = null;
             isSending = false;
         }
     }
+
+    private void Cancel() => cancellationTokenSource?.Cancel();
 
     private sealed class ChatMessage(string role, string label)
     {

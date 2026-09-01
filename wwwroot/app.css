@@ -31,5 +31,7 @@ textarea:focus { outline: 2px solid #198f76; }
 button { min-height: 48px; padding: 0 18px; color: #fffdf5; background: #172f2b; border: 1px solid #172f2b; cursor: pointer; }
 button:hover:not(:disabled) { background: #198f76; }
 button:disabled { cursor: not-allowed; opacity: .5; }
+.cancel-button { color: #172f2b; background: #fffdf5; }
+.cancel-button:hover:not(:disabled) { color: #fffdf5; background: #9c2e27; border-color: #9c2e27; }
 @keyframes pulse { to { width: 0; } }
 @media (max-width: 600px) { .chat-page { padding: 0; } .chat-shell { min-height: 100vh; border: 0; box-shadow: none; } .chat-header, .conversation, .composer { padding-left: 18px; padding-right: 18px; } .message { max-width: 92%; } .welcome-message { margin: 90px auto; } .composer-row { align-items: stretch; } button { padding: 0 14px; } }
