@@ -29,5 +29,12 @@ spec:
               value: {{ .Values.ollama.baseUrl | quote }}
             - name: Ollama__Model
               value: {{ .Values.ollama.model | quote }}
+          volumeMounts:
+            - name: data-protection-keys
+              mountPath: /keys
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: data-protection-keys
+          persistentVolumeClaim:
+            claimName: {{ include "chatbot.fullname" . }}-data-protection

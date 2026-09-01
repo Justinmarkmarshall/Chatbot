@@ -14,6 +14,12 @@ ollama:
   baseUrl: http://ollama:11434
   model: qwen3:1.7b
 
+dataProtection:
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+
 httpRoute:
   enabled: true
   hostnames:

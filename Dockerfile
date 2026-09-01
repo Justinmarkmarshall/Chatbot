@@ -13,5 +13,8 @@ EXPOSE 8080
 
 ENV ASPNETCORE_URLS=http://+:8080
 
+RUN mkdir /keys
+VOLUME ["/keys"]
+
 COPY --from=build /app/publish ./
 ENTRYPOINT ["dotnet", "Chatbot.dll"]
