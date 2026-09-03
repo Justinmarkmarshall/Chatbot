@@ -44,7 +44,7 @@
         <form class="composer" @onsubmit="SendAsync" @onsubmit:preventDefault>
             <label for="message">Message</label>
             <div class="composer-row">
-                <textarea id="message" @bind="prompt" placeholder="Ask anything..." rows="1" disabled="@isSending"></textarea>
+                <textarea id="message" @bind="prompt" @bind:event="oninput" placeholder="Ask anything..." rows="1" disabled="@isSending"></textarea>
                 <button type="submit" disabled="@(isSending || string.IsNullOrWhiteSpace(prompt))">
                     Send <span aria-hidden="true">&#8599;</span>
                 </button>
@@ -98,13 +98,19 @@
             messages.Add(assistantMessage);
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationTokenSource.Token);
-            using var reader = new StreamReader(stream);
-            var buffer = new char[1024];
-            int charactersRead;
-            while ((charactersRead = await reader.ReadAsync(buffer, cancellationTokenSource.Token)) > 0)
+            var buffer = new byte[256];
+            while (true)
             {
-                assistantMessage.Content += new string(buffer, 0, charactersRead);
+                var bytesRead = await stream.ReadAsync(buffer, cancellationTokenSource.Token);
+                if (bytesRead == 0)
+                {
+                    break;
+                }
+
+                Console.WriteLine($"Received {bytesRead} bytes");
+                assistantMessage.Content += System.Text.Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 await InvokeAsync(StateHasChanged);
+                await Task.Yield();
             }
 
             if (string.IsNullOrWhiteSpace(assistantMessage.Content))
