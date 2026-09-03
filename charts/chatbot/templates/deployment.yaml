@@ -26,7 +26,7 @@ spec:
               protocol: TCP
           env:
             - name: Ollama__BaseUrl
-              value: {{ .Values.ollama.baseUrl | quote }}
+              value: {{ .Values.ollama.baseUrl | default (printf "http://%s-ollama:%v" (include "chatbot.fullname" .) .Values.ollama.deploy.port) | quote }}
             - name: Ollama__Model
               value: {{ .Values.ollama.model | quote }}
           volumeMounts:

@@ -11,8 +11,36 @@ service:
   targetPort: 8080
 
 ollama:
-  baseUrl: http://ollama:11434
   model: qwen3:1.7b
+  # Leave baseUrl empty to use the in-cluster Ollama deployed below.
+  # Set it (e.g. http://my-gpu-host:11434) to use an external Ollama instead.
+  baseUrl: ""
+  deploy:
+    enabled: true
+    image:
+      repository: ollama/ollama
+      tag: latest
+      pullPolicy: IfNotPresent
+    port: 11434
+    # Pull .Values.ollama.model on pod start (cached on the PVC).
+    pullModel: true
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        memory: 3Gi  
+    # For NVIDIA GPUs with the device plugin installed, use e.g.:
+    # resources:
+    #   requests:
+    #     cpu: 500m
+    #     memory: 4Gi
+    #   limits:
+    #     nvidia.com/gpu: 1
 
 dataProtection:
   persistence:

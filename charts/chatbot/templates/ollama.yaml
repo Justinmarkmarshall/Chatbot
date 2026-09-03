@@ -1,0 +1,123 @@
+{{- if .Values.ollama.deploy.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "chatbot.fullname" . }}-ollama
+  labels:
+    {{- include "chatbot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.ollama.deploy.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "chatbot.name" . }}-ollama
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chatbot.fullname" . }}-ollama
+  labels:
+    {{- include "chatbot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "chatbot.name" . }}-ollama
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "chatbot.name" . }}-ollama
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: ollama
+    spec:
+      containers:
+        - name: ollama
+          image: "{{ .Values.ollama.deploy.image.repository }}:{{ .Values.ollama.deploy.image.tag }}"
+          imagePullPolicy: {{ .Values.ollama.deploy.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.ollama.deploy.port }}
+              protocol: TCP
+          env:
+            - name: MODEL
+              value: {{ .Values.ollama.model | quote }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              ollama serve &
+              SERVE_PID=$!
+              until ollama list >/dev/null 2>&1; do sleep 1; done
+              {{- if .Values.ollama.deploy.pullModel }}
+              if ! ollama list | grep -q "${MODEL}"; then
+                echo "Pulling model ${MODEL}..."
+                ollama pull "${MODEL}"
+              fi
+              {{- end }}
+              wait ${SERVE_PID}
+          {{- if .Values.ollama.deploy.pullModel }}
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - ollama list | grep -q "${MODEL}"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
+          {{- else }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: models
+              mountPath: /root/.ollama
+          resources:
+            {{- toYaml .Values.ollama.deploy.resources | nindent 12 }}
+      volumes:
+        - name: models
+          {{- if .Values.ollama.deploy.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "chatbot.fullname" . }}-ollama
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+---
+{{- if .Values.ollama.deploy.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "chatbot.fullname" . }}-ollama
+  labels:
+    {{- include "chatbot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.ollama.deploy.persistence.size }}
+  {{- with .Values.ollama.deploy.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}
