@@ -56,5 +56,13 @@ httpRoute:
     - name: public-gateway
       namespace: envoy-gateway-system
       sectionName: http
+  # Gateway API route timeouts. "0s" disables the timeout entirely —
+  # needed so long-running LLM responses don't get cut off with a 504
+  # (Envoy's default route timeout is ~15s).
+  timeouts:
+    request: 5m
+    backendRequest: 5m
+    # backendRequest caps time waiting for the backend per attempt.
+    # backendRequest: "0s"
      
 resources: {}
