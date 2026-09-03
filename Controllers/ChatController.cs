@@ -19,8 +19,12 @@ public sealed class ChatController(IOllamaClient ollamaClient) : ControllerBase
             await Response.WriteAsync("Message is required.", cancellationToken);
             return;
         }
-
+        
+        Response.StatusCode = StatusCodes.Status200OK;
         Response.ContentType = "text/plain; charset=utf-8";
+
+        await Response.StartAsync(cancellationToken);
+        
         await foreach (var chunk in ollamaClient.StreamChatAsync(request.Message, cancellationToken))
         {
             await Response.WriteAsync(chunk, cancellationToken);
