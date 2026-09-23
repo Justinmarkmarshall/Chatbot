@@ -27,7 +27,7 @@ jobs:
         run: dotnet restore Chatbot.sln
 
       - name: Run unit tests
-        run: dotnet test Chatbot/tests/Chatbot.UnitTests/Chatbot.UnitTests.csproj --configuration Release --no-restore --logger "console;verbosity=normal"
+        run: dotnet test tests/Chatbot.UnitTests/Chatbot.UnitTests.csproj --configuration Release --no-restore --logger "console;verbosity=normal"
 
       - name: Run integration tests
         env:
