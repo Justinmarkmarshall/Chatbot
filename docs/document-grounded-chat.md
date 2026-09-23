@@ -4,7 +4,7 @@ Chat generation now connects the existing MiniLM/pgvector pipeline to Ollama/Qwe
 
 ## Behaviour
 
-- A chat with no uploaded documents returns a clear no-processed-documents response without calling Ollama. There is no general-purpose fallback.
+- A chat with no uploaded documents retains the existing general Ollama chat behaviour.
 - A chat with only queued/processing/failed documents, or no successfully indexed chunks, returns the same no-processed-documents response without calling Ollama. This response is saved in conversation history.
 - For a chat with ready documents, the question is embedded using the existing pinned MiniLM FP32 implementation. PostgreSQL ranks eligible chunks with exact cosine distance and returns at most five (all available when fewer than five exist). There is no similarity cutoff or approximate index.
 - Both the authenticated Google NameIdentifier and current chat ID are predicates in the database query. The query also requires uploaded/ready status and the matching model profile. There is no retrieval from other tabs, global search, or filtering of cross-user results in memory.
