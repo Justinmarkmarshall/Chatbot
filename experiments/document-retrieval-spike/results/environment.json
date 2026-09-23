@@ -1,0 +1,21 @@
+{
+  "TimestampUtc": "2026-09-23T12:06:04.9133202Z",
+  "PostgreSQLImageTag": "pgvector/pgvector:0.8.6-pg17-bookworm",
+  "PostgreSQLImageId": "sha256:17a06c0a60bf6fb548a8493b8f6057dc830b791bbbe1f1ab706ca4b9d97c8180",
+  "PostgreSQLRepoDigests": [
+    "pgvector/pgvector@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f"
+  ],
+  "RunnerImageId": "sha256:3d4640fe2389271170c5b3ad1157e4b37a0dd53688a134b5353719822a21e32e",
+  "RunnerExitCode": 0,
+  "DatabasePublishedPorts": {},
+  "DockerOS": "Rancher Desktop WSL Distribution",
+  "Kernel": "6.18.33.2-microsoft-standard-WSL2",
+  "Architecture": "amd64",
+  "EngineVersion": "29.5.3",
+  "HostProcessor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+  "DatabaseMemoryLimitBytes": 536870912,
+  "RunnerMemoryLimitBytes": 805306368,
+  "DatabaseNanoCpus": 1000000000,
+  "RunnerNanoCpus": 1000000000,
+  "NetworkInspection": "true"
+}

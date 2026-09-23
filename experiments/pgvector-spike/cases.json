@@ -1,0 +1,21 @@
+{
+  "passages": [
+    {"id":1,"text":"Restore a PostgreSQL database by importing a previously saved backup file. This can recover data lost through accidental deletion."},
+    {"id":2,"text":"Schedule database backups every night and retain several generations. Store a copy on another machine."},
+    {"id":3,"text":"To reset a forgotten password, select “Forgot password” and follow the recovery link sent to your email address."},
+    {"id":4,"text":"Bake a bread loaf in a preheated oven at 220 degrees Celsius for approximately thirty minutes."},
+    {"id":5,"text":"Yeast makes bread dough rise by producing carbon dioxide during fermentation."},
+    {"id":6,"text":"Solar panels convert sunlight into electrical energy using photovoltaic cells."},
+    {"id":7,"text":"The railway service arrives at the central station at noon. Passengers should reach the platform before departure."},
+    {"id":8,"text":"Tomato plants need sunlight, regular watering and well-drained soil to grow successfully."}
+  ],
+  "questions": [
+    {"text":"How can I recover database records that were accidentally deleted?","expectedId":1},
+    {"text":"I cannot remember my account password. How do I regain access?","expectedId":3},
+    {"text":"What oven temperature and cooking time should I use for a bread loaf?","expectedId":4},
+    {"text":"How is sunlight turned into electricity?","expectedId":6},
+    {"text":"When does the train reach the central station?","expectedId":7},
+    {"text":"What conditions help tomatoes grow?","expectedId":8},
+    {"text":"Who composed the opera The Magic Flute?","expectedId":null}
+  ]
+}

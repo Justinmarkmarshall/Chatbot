@@ -1,0 +1,38 @@
+[
+  {
+    "id": "minilm",
+    "repository": "sentence-transformers/all-MiniLM-L6-v2",
+    "graph": "onnx/model.onnx",
+    "maxTokens": 256,
+    "precision": "FP32",
+    "queryPrefix": "",
+    "passagePrefix": "",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "hashes": {
+      "model.onnx": "6fd5d72fe4589f189f8ebc006442dbb529bb7ce38f8082112682524616046452",
+      "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
+      "tokenizer.json": "be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037",
+      "tokenizer_config.json": "acb92769e8195aabd29b7b2137a9e6d6e25c476a4f15aa4355c233426c61576b",
+      "config.json": "953f9c0d463486b10a6871cc2fd59f223b2c70184f49815e7efbcab5d8908b41",
+      "README.md": "dcd602d2fd35c203a247304a06fec6654a12f7941b739f9221a064fe8dc3b7f0"
+    }
+  },
+  {
+    "id": "e5",
+    "repository": "intfloat/e5-small-v2",
+    "graph": "onnx/model_O4.onnx",
+    "maxTokens": 512,
+    "precision": "FP16 upstream O4",
+    "queryPrefix": "query: ",
+    "passagePrefix": "passage: ",
+    "revision": "ffb93f3bd4047442299a41ebb6fa998a38507c52",
+    "hashes": {
+      "model_O4.onnx": "5a0ed8686280e292eec2321fbe06f21c3c53ed434ce5548712354211ef9e70bc",
+      "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
+      "tokenizer.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+      "tokenizer_config.json": "ae83fa6ca0333117ff12606020af925d648667ef70d92ff7f27d781ba0ca4544",
+      "config.json": "5dfb0363cd0243be179c03bcaafd1542d0fbb95e8cbcf575fff3e229342adc2f",
+      "README.md": "0d57eda4766cc7ac045f2bf7e700286ea5a8360bb9b57278f67f9b8ef60b0b24"
+    }
+  }
+]

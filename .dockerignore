@@ -4,3 +4,8 @@ obj/
 .vs/
 Dockerfile*
 README*
+experiments/
+tests/
+model-assets/
+appsettings*.json
+*.csproj.user

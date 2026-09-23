@@ -1,0 +1,18 @@
+{
+  "minimumMargin": 0.05,
+  "groups": [
+    {"name":"animals", "query":"A dog is playing in the garden.", "related":"A puppy is having fun outside in the yard.", "unrelated":"The database backup finished at midnight."},
+    {"name":"password", "query":"How can I reset my password?", "related":"To recover account access, choose the forgotten password option.", "unrelated":"The mountain trail was covered in fresh snow."},
+    {"name":"backup", "query":"How do I restore a database backup?", "related":"Recover the database by importing its saved backup file.", "unrelated":"The chef baked a chocolate cake for the birthday party."},
+    {"name":"travel", "query":"The train arrives at the station at noon.", "related":"At midday, the railway service reaches the station.", "unrelated":"Plants convert sunlight into energy through photosynthesis."},
+    {"name":"cooking", "query":"How long should I bake bread in the oven?", "related":"Cook the bread loaf in a hot oven for thirty minutes.", "unrelated":"Network routers forward packets between computers."}
+  ],
+  "tokenizerCases": [
+    "", "Hello, WORLD!", "Café naïve résumé — déjà vu.",
+    "Tabs\there\nand multiple   spaces.", "你好 world 👋", "don't re-index v1.2 /api/chat",
+    "[CLS] example [SEP] [MASK]", "İstanbul STRAẞE é", "a\u0000b\u0007c",
+    "hello[CLS]world[SEP]", "one\u00a0two\u2003three", "zero\u200bwidth", "emoji👋attached",
+    "𠀀漢字 mixed", "word\r\nnext\tline", "[PAD] [UNK] [cls]", "ΑΘΗΝΑ Москва العربية",
+    "Cafe\u0301 ﬁancée £12.50 + tax", "line\u2028separator\u2029paragraph"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "CheckedFiles": 43,
+  "ChangedFiles": [
+    "appsettings.json"
+  ],
+  "Preserved": false,
+  "OriginalEmbeddingResultFilesChecked": 6,
+  "OriginalEmbeddingResultsPreserved": true,
+  "Note": "appsettings.json changed during this session without being written by the spike; left untouched. All spike edits are under experiments/."
+}

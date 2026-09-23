@@ -4,6 +4,12 @@ namespace AIPlatform.Api.Models;
 
 public sealed class OllamaChatResponse
 {
+    [JsonPropertyName("done")]
+    public bool Done { get; init; }
+
+    [JsonPropertyName("error")]
+    public string? Error { get; init; }
+
     [JsonPropertyName("message")]
     public OllamaMessage Message { get; init; } = new();
 }

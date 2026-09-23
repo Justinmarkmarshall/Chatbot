@@ -1,0 +1,36 @@
+@page "/login"
+@attribute [AllowAnonymous]
+
+<PageTitle>Sign in · Ollama Chat</PageTitle>
+
+<main class="chat-page login-page">
+    <section class="login-card" aria-labelledby="login-title">
+        <header class="chat-header">
+            <div><p class="eyebrow">LOCAL AI</p><h1 id="login-title">Ollama Chat</h1></div>
+        </header>
+        <div class="login-content">
+            <h2>A place to think.</h2>
+            <p>Sign in to start a conversation with your local AI assistant.</p>
+            @if (!string.IsNullOrEmpty(Error))
+            {
+                <p class="login-error" role="alert">We couldn’t sign you in. Please try again.</p>
+            }
+            <AuthorizeView>
+                <Authorized>
+                    <a class="login-button" href="/" data-enhance-nav="false">Continue to chat <span aria-hidden="true">↗</span></a>
+                    <a href="/logout" data-enhance-nav="false">Sign out</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a class="login-button" href="@GoogleLoginUrl" data-enhance-nav="false">Continue with Google <span aria-hidden="true">↗</span></a>
+                </NotAuthorized>
+            </AuthorizeView>
+            <p class="login-note">Google handles sign-in. Your conversations run through the local Ollama service.</p>
+        </div>
+    </section>
+</main>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery(Name = "error")] public string? Error { get; set; }
+    private string GoogleLoginUrl => "/login-google?returnUrl=" + Uri.EscapeDataString(ReturnUrl ?? "/");
+}

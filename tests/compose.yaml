@@ -1,0 +1,18 @@
+name: chatbot-persistence-tests
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg17-bookworm
+    environment:
+      POSTGRES_DB: chatbot_persistence_tests
+      POSTGRES_USER: test_only
+      POSTGRES_PASSWORD: disposable_test_only
+    ports:
+      - "127.0.0.1::5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_only -d chatbot_persistence_tests"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+

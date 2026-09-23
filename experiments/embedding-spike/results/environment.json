@@ -1,0 +1,20 @@
+{
+  "HostProcessor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+  "HostLogicalProcessors": "8",
+  "DockerOS": "Rancher Desktop WSL Distribution",
+  "Kernel": "6.18.33.2-microsoft-standard-WSL2",
+  "EngineVersion": "29.5.3",
+  "DockerCPUs": 4,
+  "DockerMemoryBytes": 8328421376,
+  "ImageId": "sha256:337d5f386fa286a738e7941c82ef3dab04c9e21a692286ca43c22a92be42b29b",
+  "ImageArchitecture": "amd64",
+  "RuntimeBase": "mcr.microsoft.com/dotnet/aspnet:10.0@sha256:2d584d8147faddb0d678c5748d47953e5b8e18621ed4fb7049a91381d9d7746f",
+  "SDKBase": "mcr.microsoft.com/dotnet/sdk:10.0@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29",
+  "CPUQuota": 1,
+  "MemoryLimitBytes": 805306368,
+  "Network": "none",
+  "ReadOnlyRoot": true,
+  "RuntimeUser": "1654",
+  "SwapLimitEnforced": false,
+  "MeasurementCaveat": "Development workstation / WSL2, not RKE2; background host workloads were not controlled."
+}

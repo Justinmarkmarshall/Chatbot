@@ -1,0 +1,57 @@
+{{- if .Values.documentProcessing.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chatbot.fullname" . }}-documents
+spec:
+  replicas: {{ .Values.documentProcessing.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "chatbot.name" . }}-documents
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "chatbot.name" . }}-documents
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: documents
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["--document-worker"]
+          env:
+            {{- include "chatbot.databaseEnv" . | nindent 12 }}
+            - name: Documents__ModelRoot
+              value: {{ .Values.documentProcessing.modelRoot | quote }}
+          resources:
+            {{- toYaml .Values.documentProcessing.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          {{- if .Values.documentProcessing.modelExistingClaim }}
+          volumeMounts:
+            - name: model
+              mountPath: {{ .Values.documentProcessing.modelRoot | quote }}
+              readOnly: true
+          {{- end }}
+      {{- if .Values.documentProcessing.modelExistingClaim }}
+      volumes:
+        - name: model
+          persistentVolumeClaim:
+            claimName: {{ .Values.documentProcessing.modelExistingClaim | quote }}
+      {{- end }}
+{{- end }}

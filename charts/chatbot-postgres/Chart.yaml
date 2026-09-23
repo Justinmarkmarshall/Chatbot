@@ -1,0 +1,7 @@
+apiVersion: v2
+name: chatbot-postgres
+description: Independent single-instance PostgreSQL 17 and pgvector storage for Chatbot
+type: application
+version: 0.1.0
+appVersion: "0.8.6-pg17-bookworm"
+kubeVersion: ">=1.32.0-0"

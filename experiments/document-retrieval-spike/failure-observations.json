@@ -1,0 +1,30 @@
+{
+  "paragraph/pg-custom": {
+    "classification": "semantically similar distractor",
+    "observation": "Rank 1 discusses custom archives and selecting the wrong restore tool, but does not name the required tool. The explicit pg_restore instruction is rank 2. The evidence supports a distractor ranking observation, not a conclusion that MiniLM alone caused it."
+  },
+  "paragraph/deploy-rollback": {
+    "classification": "semantically similar distractor",
+    "observation": "The follow-up verification paragraph in the correct rollback section ranks above the paragraph containing rollout undo and the database-migration limitation. Grouping the section succeeds in this corpus; heading context and additional answer content change together."
+  },
+  "paragraph/observe-close": {
+    "classification": "boundary split",
+    "observation": "The external recheck and ten-minute error-ratio requirement occupy separate paragraphs. No paragraph chunk contains both frozen evidence spans. The top result includes only the latter. This is a failure of single-chunk sufficiency; the experiment does not score unions of multiple partial chunks."
+  },
+  "paragraph/password-session": {
+    "classification": "semantically similar distractor",
+    "observation": "Rank 1 explains stale pages and fresh sign-in, while the explicit policy revoking all existing sessions is rank 3. The first result is closely related and may imply part of the answer, but does not contain the frozen account-wide revocation statement. Strict evidence labels make this distinction; an independent human relevance review could differ."
+  },
+  "fixed-254-50/pg-custom": {
+    "classification": "boundary split",
+    "observation": "Rank 1 ends with 'restored with pg_restore, not by feeding it to', before the final 'psql.' in the frozen evidence sentence. It names the requested program, so the full-sentence evidence rule is stricter than a minimal human answer here. The complete evidence is rank 3, mixed with retention and recovery content. Preserve the miss; it exposes both boundary sensitivity and an evaluation-case limitation."
+  },
+  "fixed-254-50/password-expiry": {
+    "classification": "semantically similar distractor",
+    "observation": "Rank 1 combines sessions, lockout, and mailbox recovery. It mentions the thirty-minute link lifetime but omits the rule invalidating earlier links. The chunk containing both rules is rank 2, only about 0.00474 lower in similarity. Several nearby concepts share each fixed window."
+  },
+  "fixed-254-50/train-delay": {
+    "classification": "boundary split",
+    "observation": "Rank 1 starts at 'North Valley staff for authorization', omitting the evidence span's leading 'contact'. Much of the instruction remains intelligible. The full evidence is rank 2, only about 0.00152 lower in similarity. This is a conservative span-based miss and should not be represented as proof that the top text is wholly useless."
+  }
+}
