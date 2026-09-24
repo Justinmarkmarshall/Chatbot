@@ -14,7 +14,7 @@ database:
 
 image:
   repository: ghcr.io/justinmarkmarshall/chatbot
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   tag: latest
 
 service:

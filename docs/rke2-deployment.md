@@ -38,6 +38,11 @@ Build credentials for Marshall.Authentication.Google continue to use the existin
 
 The commands below use Bash and assume three private files have already been created outside the repository. The password file must contain the actual password without a trailing newline; OAuth files contain the actual Google client ID and secret. These are operator-supplied values, not values committed to Helm.
 
+```
+printf '%s' 'YOUR_REAL_CLIENT_ID.apps.googleusercontent.com' \
+  > /secure/chatbot/google-client-id
+  ```
+
 ```bash
 kubectl config current-context
 kubectl get storageclass
@@ -55,7 +60,7 @@ Do not overwrite the password Secret with a different value on an existing datab
 
 ## Values and installation order
 
-Create local non-secret override files. For example `postgres-rke2.yaml`:
+This is how the `postgres.yaml` should look, the cluster default is local-path:
 
 ```yaml
 persistence:
@@ -63,7 +68,7 @@ persistence:
   storageClass: "" # Cluster default, or your actual class.
 ```
 
-And `chatbot-rke2.yaml`:
+And `chatbot.yaml`:
 
 ```yaml
 image:
@@ -109,6 +114,59 @@ kubectl -n chatbot exec chatbot-postgres-0 -- \
 Confirm HTTPRoute `Accepted` and `ResolvedRefs`. The existing Gateway must permit routes from namespace `chatbot` in its listener `allowedRoutes`; the chart does not modify the shared Gateway. Cloudflare must route your configured hostname to that Gateway, and Google must allow `https://YOUR_HOST/signin-google`. Route timeouts remain five minutes for streaming chat. Only web receives Google/Ollama configuration; worker only receives database/model configuration.
 
 A complete connection-string Secret is still supported through `database.existingSecret` and `database.connectionStringKey`. When unset, the chart passes database host/port/name/user plus a password Secret separately; NpgsqlConnectionStringBuilder escapes password delimiters safely. Both modes use the existing ASP.NET environment-variable configuration system. Ensure a legacy connection-string Secret uses cluster Service DNS, never localhost or a node address.
+
+## Envoy: preserve HTTPS for Google sign-in behind Cloudflare
+
+The web Deployment includes:
+
+```yaml
+env:
+  - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+    value: "true"
+```
+
+ASP.NET must consume the forwarded scheme, but Envoy must first preserve it. In this deployment the browser uses HTTPS to Cloudflare, while `cloudflared -> Envoy` uses HTTP. Without trusted-proxy configuration, Envoy can replace the incoming `X-Forwarded-Proto: https` with `http`. The environment variable alone cannot repair that incorrect incoming header.
+
+An OAuth `Location` header containing `redirect_uri=http%3A%2F%2Fchatbot.marshalllab.uk%2Fsignin-google` confirms the application is still generating an HTTP callback.
+
+For this topology, trust the proxy immediately ahead of Envoy with one trusted hop. Save the following as `cloudflare-forwarded-headers.yaml` in your shared Gateway configuration:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: cloudflare-forwarded-headers
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: public-gateway
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 1
+```
+
+This policy is managed separately from the Chatbot Helm release. If a policy already targets this Gateway, merge the setting into it instead of creating a conflicting policy. The one-hop setting assumes the ingress path above; reassess it if proxies change and keep the listener accessible through the trusted path.
+
+Select the intended cluster context, then apply and inspect the policy:
+
+```bash
+kubectl apply -f cloudflare-forwarded-headers.yaml
+kubectl get clienttrafficpolicy -n envoy-gateway-system cloudflare-forwarded-headers -o yaml
+```
+
+Under `status.ancestors[].conditions`, confirm `type: Accepted` has `status: "True"` for `public-gateway`. Upgrade the application Helm release with your existing values to roll out the web environment setting.
+
+Click **Sign in with Google** again and inspect the redirect response's `Location` header in the browser Network panel. The expected query parameter is:
+
+```text
+redirect_uri=https%3A%2F%2Fchatbot.marshalllab.uk%2Fsignin-google
+```
+
+This decodes to `https://chatbot.marshalllab.uk/signin-google`, which must match Google's authorized redirect URI. Do **not** add an HTTP callback for the public hostname to work around a broken forwarded scheme. If it remains HTTP, inspect the outgoing headers at each proxy.
+
+Envoy documents how trusted hops control incoming `X-Forwarded-Proto`: [Client traffic policy](https://gateway.envoyproxy.io/v1.7/tasks/traffic/client-traffic-policy/#configure-client-ip-detection) and [Envoy header handling](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers.html#x-forwarded-proto).
 
 ## Schema and startup
 
