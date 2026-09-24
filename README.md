@@ -1,330 +1,208 @@
-# AIPlatform
+# Chatbot
 
-Chatbot now supports persistent, Google-account-owned chat tabs, editable titles,
-and restored conversation history using PostgreSQL. See the
-[persistent chat setup and API guide](docs/persistent-chat-sessions.md) for the
-required database connection string and Helm Secret reference.
+Chatbot is a self-hosted .NET 10 web application for authenticated, persistent
+conversations with a local Ollama model. Each Google-account-owned chat can keep
+its history and a private, searchable collection of uploaded documents.
 
-AIPlatform is a self-hosted .NET Web API that provides a wrapper around a locally hosted Large Language Model (LLM).
-
-The initial implementation uses **Ollama** as the local inference runtime and **Qwen3 1.7B** as the language model.
+The default configuration uses Ollama with `qwen3:1.7b`. Document retrieval uses
+the packaged `sentence-transformers/all-MiniLM-L6-v2` ONNX model. It produces
+normalized 384-dimensional embeddings locally; embeddings are not sent to an
+external embedding service.
 
 ## Architecture
 
 ```text
-Client
-  │
-  │ POST /api/chat
-  ▼
-┌─────────────────────┐
-│     AIPlatform      │
-│   ASP.NET Core API  │
-└──────────┬──────────┘
-           │ HTTP
-           │ localhost:11434
-           ▼
-┌─────────────────────┐
-│       Ollama        │
-│   Inference Runtime │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│    Qwen3 1.7B       │
-│    Local LLM        │
-└─────────────────────┘
+                         ┌──────────────────────┐
+                         │  Chatbot web process  │
+                         │ .NET 10 / Blazor/API  │
+                         └───────┬───────┬──────┘
+                                 │       │
+                  chat/retrieval │       │ generation
+                                 │       │
+                                 v       v
+                  ┌──────────────────┐  ┌──────────────┐
+                  │ PostgreSQL +     │  │ Ollama       │
+                  │ pgvector         │  │ qwen3:1.7b   │
+                  │ chats, originals │  └──────────────┘
+                  │ chunks, vectors  │
+                  └────────^─────────┘
+                           │
+                           │ claims queued documents
+                           │
+                  ┌────────┴─────────┐
+                  │ Document Worker  │
+                  │ same application │
+                  │ image; separate  │
+                  │ process          │
+                  └──────────────────┘
 ```
 
-The .NET application acts as a controlled wrapper around Ollama. Clients communicate with AIPlatform rather than communicating directly with the model.
+The web process and Document Worker run the same container image. The worker is
+started with `--document-worker`; it has no public HTTP surface. PostgreSQL is
+the durable store for chat state, original uploads, document processing state,
+and vector chunks. Ollama is a separate workload or service addressed through
+configuration.
 
-This provides a foundation for adding features such as authentication, conversation history, streaming, RAG, tools and model switching later.
+### Document RAG pipeline
 
-## Model
+1. An authenticated user uploads a PDF or UTF-8 `.txt` file to a chat. The
+   original file and metadata are persisted in PostgreSQL, then the document is
+   marked queued.
+2. The Document Worker serially claims queued work from PostgreSQL. It extracts
+   text from PDFs, preserves page information where available, detects PDF
+   headings heuristically, and splits text into token-aware windows of at most
+   254 MiniLM content tokens with a 50-token overlap.
+3. The worker generates a MiniLM embedding for every chunk and stores the chunk
+   text, source metadata, and 384-dimensional vector in `document_chunks`.
+   Startup migrations enable the PostgreSQL `vector` extension.
+4. For a document-backed chat question, the web process embeds the question with
+   the same MiniLM model and performs an exact cosine-distance pgvector query.
+   The five nearest chunks from ready documents in that chat are supplied to
+   Ollama as quoted context.
+5. The document prompt instructs the model to use only retrieved evidence and to
+   cite the returned source numbers. If no document is ready, Chatbot reports
+   that instead of sending the question to Ollama without document context.
 
-The initial model is:
+Documents are scoped to their owning chat and authenticated Google subject.
+Deleting a document removes its original and cascades to its indexed chunks and
+vectors. Historical reply source snapshots remain part of the conversation
+history, but deleted originals are no longer downloadable.
 
-```text
-qwen3:1.7b
-```
+## Model assets
 
-### Why Qwen3 1.7B?
+The image build downloads the pinned, hash-verified MiniLM files and copies them
+to `/model-assets`. Both the web process and worker load those local assets; pods
+do not download the embedding model at startup. The model manifest is
+[`Processing/minilm.json`](Processing/minilm.json).
 
-The target private-cloud server has **8 GB RAM and no suitable GPU acceleration**, so Ollama performs inference using the CPU.
+`qwen3:1.7b` is the default Ollama model in
+[`appsettings.json`](appsettings.json) and the Helm values. It can be changed by
+setting `Ollama__Model` or `ollama.model`, provided the configured Ollama service
+has that model available.
 
-Several model sizes were considered and tested.
+## Prerequisites
 
-Qwen3 4B proved too large for the available resources and caused the server to become unresponsive when loading the model.
+- .NET SDK 10
+- Docker Compose for the local PostgreSQL service
+- Ollama, with the configured chat model available
+- Google OAuth credentials for interactive sign-in
+- Access to the GitHub Packages feed used by
+  `Marshall.Authentication.Google` when restoring or building locally
 
-Qwen3 0.6B ran comfortably and consumed approximately 1 GB while loaded, but the smaller model provides more limited reasoning and response quality.
+The supplied Compose service uses `pgvector/pgvector`, so it is suitable for the
+document pipeline as well as persistent chats.
 
-Qwen3 1.7B provided the best compromise between:
+## Local development
 
-* Response quality
-* Memory consumption
-* CPU inference performance
-* Available resources for the existing RKE2 workloads
+1. Configure the package-feed credentials required by `nuget.config`, then
+   restore the project:
 
-During testing, Qwen3 1.7B consumed approximately **1.9 GB** while loaded and left approximately **2.3 GiB of system memory available** on the 8 GB private-cloud server.
+   ```powershell
+   dotnet restore
+   ```
 
-For this reason, **Qwen3 1.7B is the initial production model for AIPlatform**.
+2. Start a local pgvector-enabled PostgreSQL instance. Choose a local password;
+   do not place it in configuration tracked by Git.
 
-The model can be changed later without changing the public AIPlatform API.
+   ```powershell
+   $env:CHATBOT_POSTGRES_PASSWORD = 'YOUR_LOCAL_DATABASE_PASSWORD'
+   docker compose -f compose.postgres.yaml up -d --wait
+   ```
 
-## Installing Ollama
+3. Store the PostgreSQL connection string and Google OAuth credentials in user
+   secrets. The documented port is the Compose service's host port.
 
-Ollama provides the runtime used to load and execute the language model.
+   ```powershell
+   dotnet user-secrets set 'ConnectionStrings:Chatbot' 'Host=localhost;Port=5434;Database=chatbot;Username=chatbot;Password=YOUR_LOCAL_DATABASE_PASSWORD'
+   dotnet user-secrets set 'Authentication:Google:ClientId' 'YOUR_CLIENT_ID'
+   dotnet user-secrets set 'Authentication:Google:ClientSecret' 'YOUR_CLIENT_SECRET'
+   ```
 
-### Windows
+   Register `https://localhost:7035/signin-google` as an authorized redirect URI
+   in the Google OAuth client. Production deployments need their own HTTPS
+   redirect URI.
 
-Install Ollama using:
+4. Make the configured model available to Ollama and start the web process:
 
-```powershell
-irm https://ollama.com/install.ps1 | iex
-```
+   ```powershell
+   ollama pull qwen3:1.7b
+   dotnet run --launch-profile https
+   ```
 
-Confirm the installation:
+5. In another terminal, start the worker:
 
-```powershell
-ollama --version
-```
+   ```powershell
+   dotnet run --environment Development --no-launch-profile -- --document-worker
+   ```
 
-Confirm that the local Ollama API is running:
+The web process and worker both initialize the schema safely under a PostgreSQL
+advisory lock. Keep the worker running to turn newly uploaded documents into
+searchable chunks. To use a non-local Ollama instance, set `Ollama__BaseUrl`;
+the default is `http://localhost:11434`.
 
-```powershell
-curl http://localhost:11434
-```
+## Kubernetes deployment
 
-A successful response should return:
+The repository contains two Helm charts:
 
-```text
-Ollama is running
-```
+| Chart | Responsibility |
+| --- | --- |
+| `charts/chatbot-postgres` | A pgvector PostgreSQL StatefulSet, ClusterIP services, and a retained data PVC. |
+| `charts/chatbot` | The web deployment, a separate Document Worker deployment, internal Service, HTTPRoute, and Data Protection PVC. |
 
-Ollama exposes its local HTTP API on:
-
-```text
-http://localhost:11434
-```
-
-### Linux
-
-Install Ollama using:
+Provision PostgreSQL separately, with a Kubernetes Secret containing a `password`
+key. The PostgreSQL chart's default persistent volume request is 10 GiB and its
+claim is retained when the StatefulSet is deleted or scaled down:
 
 ```bash
-curl -fsSL https://ollama.com/install.sh | sh
+helm upgrade --install chatbot-postgres ./charts/chatbot-postgres \
+  --namespace chatbot --create-namespace \
+  --set database.existingSecret=chatbot-postgres-auth
 ```
 
-Confirm the installation:
+Deploy Chatbot with Google OAuth and database credentials supplied by existing
+Secrets. `database.existingSecret` should contain a complete connection string
+under `connection-string`; alternatively, configure the separate database
+password Secret and the database host/name/user values in a deployment-specific
+values file.
 
 ```bash
-ollama --version
+helm upgrade --install chatbot ./charts/chatbot \
+  --namespace chatbot --create-namespace \
+  --set authentication.existingSecret=chatbot-google-auth \
+  --set database.existingSecret=chatbot-database
 ```
 
-## Downloading and Running Qwen3 1.7B
+The application chart expects an existing Ollama endpoint at
+`ollama.baseUrl` by default. Its in-chart Ollama workload is deliberately
+disabled and Helm rejects enabling it, so deploy or manage Ollama independently
+and ensure the selected `ollama.model` is present there. The chart's web and
+worker deployments use the same application image, including the MiniLM assets.
 
-Download and start the model with:
+The application is exposed through a Gateway API `HTTPRoute`; configure
+`httpRoute.parentRefs` and `httpRoute.hostnames` for the target cluster. Keep the
+Data Protection PVC enabled so authentication cookies survive web-pod restarts.
+Do not put OAuth, PostgreSQL, or package-feed credentials in Helm values.
 
-```bash
-ollama run qwen3:1.7b
-```
+## Configuration
 
-The first execution downloads the model before starting an interactive session.
+| Setting | Purpose |
+| --- | --- |
+| `ConnectionStrings:Chatbot` | Complete PostgreSQL connection string. |
+| `Ollama:BaseUrl` | Ollama HTTP endpoint; defaults to `http://localhost:11434`. |
+| `Ollama:Model` | Chat model name; defaults to `qwen3:1.7b`. |
+| `Documents:ModelRoot` | Directory containing the packaged `minilm` model; the image default is `/model-assets`. |
+| `Authentication:Google:ClientId` / `ClientSecret` | Google OAuth credentials. |
 
-Once downloaded, the same command can be used to start it again:
+## Validation
 
-```bash
-ollama run qwen3:1.7b
-```
-
-A prompt will then be available:
-
-```text
->>> What is Kubernetes?
-```
-
-To exit the interactive Ollama session:
-
-```text
-/bye
-```
-
-## Checking Installed Models
-
-List locally installed models:
-
-```bash
-ollama list
-```
-
-Qwen should appear as:
-
-```text
-qwen3:1.7b
-```
-
-## Checking Running Models
-
-To see models currently loaded by Ollama:
-
-```bash
-ollama ps
-```
-
-This displays useful information including:
-
-* Model name
-* Memory size
-* CPU/GPU usage
-* Context size
-* How long the model will remain loaded
-
-For example, the private-cloud server currently runs Qwen3 1.7B using:
-
-```text
-PROCESSOR: 100% CPU
-CONTEXT:   4096
-```
-
-An empty `ollama ps` does not necessarily mean Ollama itself has stopped. Ollama unloads models from memory after they have been idle.
-
-## AIPlatform Configuration
-
-AIPlatform connects to Ollama using configuration rather than hard-coded addresses.
-
-For local development:
-
-```json
-{
-  "Ollama": {
-    "BaseUrl": "http://localhost:11434",
-    "Model": "qwen3:1.7b"
-  }
-}
-```
-
-This allows different Ollama endpoints or models to be configured when AIPlatform is deployed to RKE2.
-
-## Running AIPlatform Locally
-
-Start Ollama and ensure Qwen3 1.7B is available:
+Run the focused repository checks after making changes:
 
 ```powershell
-ollama run qwen3:1.7b
+dotnet test tests/Chatbot.UnitTests/Chatbot.UnitTests.csproj
+helm lint charts/chatbot
+helm lint charts/chatbot-postgres
 ```
 
-Configure PostgreSQL using [the persistent chat setup](docs/persistent-chat-sessions.md), then start the .NET Web API:
-
-```powershell
-dotnet run
-```
-
-AIPlatform exposes:
-
-```text
-POST /api/chat
-```
-
-Example request:
-
-```json
-{
-  "message": "what is kubernetes"
-}
-```
-
-The request flow is:
-
-```text
-POST /api/chat
-      │
-      ▼
-AIPlatform
-      │
-      ▼
-Ollama HTTP API
-      │
-      ▼
-Qwen3 1.7B
-      │
-      ▼
-Generated response
-      │
-      ▼
-AIPlatform response
-```
-
-The initial proof of concept successfully generates responses entirely through the locally hosted model without using an external commercial LLM API.
-
-## Kubernetes Deployment
-
-The Helm chart in `charts/chatbot` deploys the application, its internal Service, and a Gateway API `HTTPRoute`.
-
-The target cluster must have the Gateway API `HTTPRoute` CRD installed and a Gateway matching the configured `httpRoute.parentRefs` value.
-
-Install or upgrade the release from the repository root:
-
-```bash
-helm upgrade --install chatbot ./charts/chatbot --namespace chatbot --create-namespace --set authentication.existingSecret=chatbot-google --set database.existingSecret=chatbot-database
-```
-
-Set the container image and route configuration for the target environment through a values file or `--set` options. The Ollama service endpoint and model are configured through `ollama.baseUrl` and `ollama.model`.
-
-## Next Steps
-
-The initial proof of concept establishes the basic .NET → Ollama → Qwen integration.
-
-Planned improvements include:
-
-1. Persistent conversation history is implemented; validate it with your deployment's Google account and PostgreSQL configuration.
-2. Investigate Retrieval-Augmented Generation (RAG) for private documentation.
-3. Introduce controlled tools for interacting with private-cloud services.
-
-## Google sign-in
-
-The login page uses `Marshall.Authentication.Google` version `1.0.0`. Anonymous visitors are redirected to `/login`; the chat API and API documentation also require authentication. The interactive component and API use the same owner-scoped persistent chat service.
-
-Configure Google OAuth credentials with user secrets from this directory:
-
-```powershell
-dotnet user-secrets set "Authentication:Google:ClientId" "YOUR_CLIENT_ID"
-dotnet user-secrets set "Authentication:Google:ClientSecret" "YOUR_CLIENT_SECRET"
-dotnet run --launch-profile https
-```
-
-Register `https://localhost:7035/signin-google` in your Google OAuth client's authorized redirect URIs. For production, register `https://YOUR_HOST/signin-google`. The package requires HTTPS for its cookies. `/login-callback` completes the application session; it is not the Google redirect URI.
-
-The package supplies `/login-google`, `/login-callback` and `/logout`. Failed or cancelled sign-in returns to the login page with an error message. Any Google account accepted by your OAuth application can sign in; there is no account allowlist. Sessions use protected, nonpersistent browser cookies, with the package's seven-day sliding lifetime. Logout clears cookies; there is no database session store or central revocation. Interactive connections close when their authentication expires.
-
-### Package restore and container builds
-
-`nuget.config` routes this package to the owner's GitHub Packages feed. For a fresh restore, configure `NuGetPackageSourceCredentials_github` in your environment with the value `Username=YOUR_GITHUB_LOGIN;Password=YOUR_TOKEN;ValidAuthenticationTypes=Basic`. Use a token with permission to read the package; do not commit it.
-
-The container workflow passes its GitHub token as a BuildKit secret. Grant this repository Actions access in the authentication package's settings. For a local container build, supply the same credentials through an environment variable:
-
-```powershell
-docker build --secret id=nuget_credentials,env=NuGetPackageSourceCredentials_github -t chatbot .
-```
-
-### Deployment credentials
-
-Provision a Kubernetes Secret containing `client-id` and `client-secret`, then set `authentication.existingSecret` to its name in Helm values (or `--set authentication.existingSecret=chatbot-google`). Helm requires this setting. Credentials are read into `Authentication__Google__ClientId` and `Authentication__Google__ClientSecret`.
-
-Retain the shared `/keys` volume so login cookies survive restarts. Local development can override `DataProtection:KeysPath` with a writable directory. The existing forwarded-header configuration trusts all proxies: keep the application reachable only through your trusted ingress, or configure explicit trusted proxies before exposing it directly.
-
-
-### Local Deployment
-
-$env:CHATBOT_POSTGRES_PASSWORD = 'the-password-used-for-your-local-database'
-
-dotnet run --environment Development --no-launch-profile -- --document-worker 
-
-docker compose -f compose.postgres.yaml up -d --wait
-
-dotnet run --launch-profile https
-
-### Kubernetes Deployment
-
-Rancher Desktop
-
-
-
+The integration harness and Helm manifest checks used in CI are available in
+[`tests/run-integration.ps1`](tests/run-integration.ps1) and
+[`tests/check-helm.py`](tests/check-helm.py).
