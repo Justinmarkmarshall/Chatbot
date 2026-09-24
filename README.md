@@ -310,3 +310,21 @@ docker build --secret id=nuget_credentials,env=NuGetPackageSourceCredentials_git
 Provision a Kubernetes Secret containing `client-id` and `client-secret`, then set `authentication.existingSecret` to its name in Helm values (or `--set authentication.existingSecret=chatbot-google`). Helm requires this setting. Credentials are read into `Authentication__Google__ClientId` and `Authentication__Google__ClientSecret`.
 
 Retain the shared `/keys` volume so login cookies survive restarts. Local development can override `DataProtection:KeysPath` with a writable directory. The existing forwarded-header configuration trusts all proxies: keep the application reachable only through your trusted ingress, or configure explicit trusted proxies before exposing it directly.
+
+
+### Local Deployment
+
+$env:CHATBOT_POSTGRES_PASSWORD = 'the-password-used-for-your-local-database'
+
+dotnet run --environment Development --no-launch-profile -- --document-worker 
+
+docker compose -f compose.postgres.yaml up -d --wait
+
+dotnet run --launch-profile https
+
+### Kubernetes Deployment
+
+Rancher Desktop
+
+
+

@@ -1,3 +1,7 @@
+PR-readiness fixes validated (2026-09-24): **61 unit tests, 149 Linux integration checks, and 30 Helm render checks passed**. Message-deletion regressions cover both roles, cross-owner/cross-chat rejection, surviving-message persistence, history ordering and the latest ten complete turns. Heading regressions cover empty headings, LF/CRLF and tab separators. The disposable PostgreSQL container was stopped afterwards; live Qwen3 was not enabled.
+
+The workflow YAML, validation dependency, publish-only-on-main condition and read/write job permissions were checked locally. Both Helm charts linted successfully. Rancher Desktop overrides rendered with no HTTPRoute and local-only images for web/worker. GitHub-hosted workflow execution, full image deployment, OAuth and host Ollama connectivity have not been run for this change.
+
 Unit-test implementation validation (2026-09-23): **56 xUnit cases passed on Windows/.NET 10**, zero failures or skips. Latest run reported 929 ms test duration (excluding build/restore). **All 140 existing integration checks also passed in the Linux .NET 10 container against disposable PostgreSQL**, including real MiniLM and pgvector. Live Qwen3 checks were not enabled for this run. The test database was stopped afterwards. See [test commands and coverage](README.md).
 
 Small testability changes: token-count/embedding delegates for isolated processing tests, extracted upload validation, and store/retrieval interfaces for chat orchestration. Production still uses the same concrete implementations. Regression fixes cover cancellation during chunking/preparation, surrogate-pair boundaries in long unbroken text, and null Ollama message objects. No live model, network, database, or model artifacts are required by the unit suite after NuGet restore. Generated-PDF tests use the real in-process PdfPig library; synthetic token counts do not establish real tokenizer parity (the integration suite checks that separately).
@@ -62,3 +66,4 @@ production database, or RKE2 deployment was tested. Tests verify restored owners
 and history across fresh identities/services, not Google's external availability.
 Deployment requires a PostgreSQL connection Secret and existing Google credentials.
 See `docs/persistent-chat-sessions.md` for setup.
+

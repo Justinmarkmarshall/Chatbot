@@ -1,5 +1,9 @@
 # Tests
 
+The `Validate and publish` GitHub Actions workflow runs unit tests, the Linux integration harness and Helm validation on pull requests to `main` and pushes to `main`. Publishing has a `needs: validate` dependency and is restricted to pushes to `main`; PRs receive no package-write permission. The repository must have Actions read access to `Marshall.Authentication.Google`. Package restore failures fail validation rather than skipping tests; fork PR package access depends on GitHub's token/package permissions. No `pull_request_target` execution or personal token is used.
+
+In the repository branch rules, make **Tests and Helm validation** a required status check to prevent merging a failed validation run. The workflow gates publishing itself; repository branch protection is configured separately. CI downloads SHA-256-verified MiniLM artifacts and uses the checked-in independent tokenizer fixture before running the real Linux integration tests.
+
 Run the focused unit tests from the Chatbot project directory:
 
 ```powershell

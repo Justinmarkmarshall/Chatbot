@@ -1,17 +1,78 @@
-name: Build and publish container image
+name: Validate and publish
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
+      - CB-LoginFunctionality
 
 permissions:
   contents: read
-  packages: write
+  packages: read
 
 jobs:
-  build-and-push:
+  validate:
+    name: Tests and Helm validation
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore test projects
+        env:
+          NuGetPackageSourceCredentials_github: Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic
+        run: |
+          dotnet restore tests/Chatbot.UnitTests/Chatbot.UnitTests.csproj
+          dotnet restore tests/Chatbot.IntegrationTests/Chatbot.IntegrationTests.csproj
+
+      - name: Unit tests
+        run: dotnet test tests/Chatbot.UnitTests/Chatbot.UnitTests.csproj --no-restore -p:OutputPath=obj/unit-build/ --verbosity minimal
+
+      - name: Prepare verified MiniLM artifacts
+        run: python3 build/fetch-minilm.py Processing/minilm.json experiments/embedding-spike/models
+
+      - name: Publish integration harness
+        run: dotnet publish tests/Chatbot.IntegrationTests/Chatbot.IntegrationTests.csproj --no-restore -c Release -p:OutputPath=obj/integration-build/ -o tests/linux-publish
+
+      - name: Linux integration tests
+        shell: pwsh
+        run: ./tests/run-linux-integration.ps1
+
+      - name: Clean up disposable database
+        if: always()
+        run: docker compose -f tests/compose.yaml down
+
+      - uses: azure/setup-helm@v4.3.0
+        with:
+          version: v3.17.3
+
+      - name: Validate Helm charts
+        run: |
+          python3 -m pip install PyYAML==6.0.3
+          helm lint charts/chatbot
+          helm lint charts/chatbot-postgres
+          mkdir -p obj/helm-ci
+          helm template chatbot charts/chatbot --kube-version 1.32.0 > obj/helm-ci/app.yaml
+          helm template chatbot-postgres charts/chatbot-postgres --kube-version 1.32.0 > obj/helm-ci/postgres.yaml
+          python3 tests/check-helm.py obj/helm-ci/app.yaml obj/helm-ci/postgres.yaml
+
+  build-and-push:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
