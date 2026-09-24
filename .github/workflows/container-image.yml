@@ -30,8 +30,12 @@ jobs:
 
       - name: Restore test projects
         env:
-          NuGetPackageSourceCredentials_github: Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic
+          # Optional classic PAT for cross-repository package reads. Default remains GITHUB_TOKEN.
+          NuGetPackageSourceCredentials_github: Username=${{ vars.PACKAGES_READ_USERNAME || github.repository_owner }};Password=${{ secrets.PACKAGES_READ_TOKEN || secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic
+          PACKAGE_AUTH_MODE: ${{ secrets.PACKAGES_READ_TOKEN != '' && 'PACKAGES_READ_TOKEN' || 'GITHUB_TOKEN' }}
         run: |
+          python3 -m unittest discover -s tests -p test_package_access.py
+          python3 build/check-package-access.py
           dotnet restore tests/Chatbot.UnitTests/Chatbot.UnitTests.csproj
           dotnet restore tests/Chatbot.IntegrationTests/Chatbot.IntegrationTests.csproj
 
@@ -101,4 +105,4 @@ jobs:
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           secrets: |
-            "nuget_credentials=Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic"
+            "nuget_credentials=Username=${{ vars.PACKAGES_READ_USERNAME || github.repository_owner }};Password=${{ secrets.PACKAGES_READ_TOKEN || secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic"
