@@ -1,0 +1,57 @@
+name: chatbot-document-retrieval-spike
+services:
+  db:
+    image: pgvector/pgvector:0.8.6-pg17-bookworm
+    environment:
+      POSTGRES_DB: embedding_spike
+      POSTGRES_USER: spike_only
+      POSTGRES_PASSWORD: disposable_spike_only_password
+    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "max_connections=20"]
+    volumes:
+      - spike-data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks: [spike]
+    cpus: 1
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spike_only -d embedding_spike"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  regression:
+    build:
+      context: ../embedding-spike
+    command: ["minilm", "/models", "/results/embedding-regression-linux.json"]
+    volumes:
+      - ../embedding-spike/models:/models:ro
+      - ./results:/results
+    network_mode: none
+    read_only: true
+    tmpfs: [/tmp]
+    cpus: 1
+    mem_limit: 768m
+  runner:
+    build:
+      context: ..
+      dockerfile: document-retrieval-spike/Dockerfile
+    environment:
+      SPIKE_CONNECTION_STRING: Host=db;Database=embedding_spike;Username=spike_only;Password=disposable_spike_only_password;Maximum Pool Size=2;Timeout=15;Command Timeout=15
+    volumes:
+      - ../embedding-spike/models:/models:ro
+      - ./results:/results
+    depends_on:
+      db:
+        condition: service_healthy
+      regression:
+        condition: service_completed_successfully
+    networks: [spike]
+    read_only: true
+    tmpfs: [/tmp]
+    cpus: 1
+    mem_limit: 768m
+networks:
+  spike:
+    internal: true
+volumes:
+  spike-data:
+

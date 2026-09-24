@@ -1,5 +1,10 @@
 # AIPlatform
 
+Chatbot now supports persistent, Google-account-owned chat tabs, editable titles,
+and restored conversation history using PostgreSQL. See the
+[persistent chat setup and API guide](docs/persistent-chat-sessions.md) for the
+required database connection string and Helm Secret reference.
+
 AIPlatform is a self-hosted .NET Web API that provides a wrapper around a locally hosted Large Language Model (LLM).
 
 The initial implementation uses **Ollama** as the local inference runtime and **Qwen3 1.7B** as the language model.
@@ -207,7 +212,7 @@ Start Ollama and ensure Qwen3 1.7B is available:
 ollama run qwen3:1.7b
 ```
 
-Then start the .NET Web API:
+Configure PostgreSQL using [the persistent chat setup](docs/persistent-chat-sessions.md), then start the .NET Web API:
 
 ```powershell
 dotnet run
@@ -259,7 +264,7 @@ The target cluster must have the Gateway API `HTTPRoute` CRD installed and a Gat
 Install or upgrade the release from the repository root:
 
 ```bash
-helm upgrade --install chatbot ./charts/chatbot --namespace chatbot --create-namespace
+helm upgrade --install chatbot ./charts/chatbot --namespace chatbot --create-namespace --set authentication.existingSecret=chatbot-google --set database.existingSecret=chatbot-database
 ```
 
 Set the container image and route configuration for the target environment through a values file or `--set` options. The Ollama service endpoint and model are configured through `ollama.baseUrl` and `ollama.model`.
@@ -270,6 +275,56 @@ The initial proof of concept establishes the basic .NET → Ollama → Qwen inte
 
 Planned improvements include:
 
-1. Add conversation history.
+1. Persistent conversation history is implemented; validate it with your deployment's Google account and PostgreSQL configuration.
 2. Investigate Retrieval-Augmented Generation (RAG) for private documentation.
 3. Introduce controlled tools for interacting with private-cloud services.
+
+## Google sign-in
+
+The login page uses `Marshall.Authentication.Google` version `1.0.0`. Anonymous visitors are redirected to `/login`; the chat API and API documentation also require authentication. The interactive component and API use the same owner-scoped persistent chat service.
+
+Configure Google OAuth credentials with user secrets from this directory:
+
+```powershell
+dotnet user-secrets set "Authentication:Google:ClientId" "YOUR_CLIENT_ID"
+dotnet user-secrets set "Authentication:Google:ClientSecret" "YOUR_CLIENT_SECRET"
+dotnet run --launch-profile https
+```
+
+Register `https://localhost:7035/signin-google` in your Google OAuth client's authorized redirect URIs. For production, register `https://YOUR_HOST/signin-google`. The package requires HTTPS for its cookies. `/login-callback` completes the application session; it is not the Google redirect URI.
+
+The package supplies `/login-google`, `/login-callback` and `/logout`. Failed or cancelled sign-in returns to the login page with an error message. Any Google account accepted by your OAuth application can sign in; there is no account allowlist. Sessions use protected, nonpersistent browser cookies, with the package's seven-day sliding lifetime. Logout clears cookies; there is no database session store or central revocation. Interactive connections close when their authentication expires.
+
+### Package restore and container builds
+
+`nuget.config` routes this package to the owner's GitHub Packages feed. For a fresh restore, configure `NuGetPackageSourceCredentials_github` in your environment with the value `Username=YOUR_GITHUB_LOGIN;Password=YOUR_TOKEN;ValidAuthenticationTypes=Basic`. Use a token with permission to read the package; do not commit it.
+
+The container workflow passes its GitHub token as a BuildKit secret. Grant this repository Actions access in the authentication package's settings. For a local container build, supply the same credentials through an environment variable:
+
+```powershell
+docker build --secret id=nuget_credentials,env=NuGetPackageSourceCredentials_github -t chatbot .
+```
+
+### Deployment credentials
+
+Provision a Kubernetes Secret containing `client-id` and `client-secret`, then set `authentication.existingSecret` to its name in Helm values (or `--set authentication.existingSecret=chatbot-google`). Helm requires this setting. Credentials are read into `Authentication__Google__ClientId` and `Authentication__Google__ClientSecret`.
+
+Retain the shared `/keys` volume so login cookies survive restarts. Local development can override `DataProtection:KeysPath` with a writable directory. The existing forwarded-header configuration trusts all proxies: keep the application reachable only through your trusted ingress, or configure explicit trusted proxies before exposing it directly.
+
+
+### Local Deployment
+
+$env:CHATBOT_POSTGRES_PASSWORD = 'the-password-used-for-your-local-database'
+
+dotnet run --environment Development --no-launch-profile -- --document-worker 
+
+docker compose -f compose.postgres.yaml up -d --wait
+
+dotnet run --launch-profile https
+
+### Kubernetes Deployment
+
+Rancher Desktop
+
+
+

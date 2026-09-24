@@ -1,0 +1,136 @@
+@implements IDisposable
+@using Chatbot.Models
+@using Chatbot.Services
+@inject DocumentService Documents
+@inject AuthenticationStateProvider AuthenticationState
+@inject ILogger<SessionDocuments> Logger
+
+<section class="session-documents" aria-label="Chat documents">
+    <h2>Documents</h2>
+    <p class="document-note">Ready documents ground answers in this chat only. Original files remain available to download.</p>
+    <label for="document-upload">Upload PDF or UTF-8 text (up to 10 MiB)</label>
+    <InputFile id="document-upload" OnChange="UploadAsync" accept=".pdf,.txt" disabled="@uploading" />
+    <button type="button" class="cancel-button" @onclick="RefreshAsync" disabled="@uploading">Refresh documents</button>
+    @if (uploading)
+    {
+        <p role="status">Uploading @uploadName...</p>
+        <button type="button" class="cancel-button" @onclick="Cancel">Cancel upload</button>
+    }
+    @if (error is not null) { <p class="document-error" role="alert">@error</p> }
+    <ul class="document-list">
+        @foreach (var document in items)
+        {
+            <li @key="document.Id">
+                <span>@document.FileName</span>
+                <button type="button" class="document-delete" disabled="@(deleting is not null)"
+                        aria-label="@($"Delete {document.FileName}")"
+                        title="Delete this original file and its searchable chunks"
+                        @onclick="() => DeleteAsync(document.Id)">@(deleting == document.Id ? "Deleting…" : "Delete")</button>
+                <span class="document-status">@Label(document)</span>
+                @if (document.Status == "uploaded")
+                {
+                                        <span>@document.ByteLength bytes</span>
+                    <span>Processing: @document.ProcessingStatus (@document.ChunkCount chunks) @document.ProcessingError</span>
+                    @if (document.ProcessingStatus == "failed")
+                    {
+                        <button type="button" @onclick="() => RetryAsync(document.Id)">Retry processing</button>
+                    }
+                    <a href="@($"/api/chat/sessions/{SessionId}/documents/{document.Id}/original")" data-enhance-nav="false" download>Download original</a>
+                }
+            </li>
+        }
+    </ul>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Guid SessionId { get; set; }
+    private IReadOnlyList<ChatDocument> items = [];
+    private string? error;
+    private string uploadName = "";
+    private bool uploading, disposed;
+    private Guid? deleting;
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? upload;
+    protected override Task OnInitializedAsync() => RefreshAsync();
+
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            items = await Documents.ListAsync(user, SessionId, lifetime.Token);
+        }
+        catch (OperationCanceledException) when (disposed) { }
+        catch (Exception ex) { Report(ex); }
+    }
+    private async Task UploadAsync(InputFileChangeEventArgs args)
+    {
+        if (uploading) return;
+        uploading = true;
+        error = null;
+        uploadName = args.File.Name;
+        upload = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        try
+        {
+            if (args.File.Size > DocumentService.MaxBytes) throw new ArgumentException("The maximum file size is 10 MiB.");
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            await using var input = args.File.OpenReadStream(DocumentService.MaxBytes, upload.Token);
+            await Documents.UploadAsync(user, SessionId, args.File.Name, input, upload.Token);
+        }
+        catch (OperationCanceledException) { if (!disposed) error = "Upload cancelled or timed out. Refresh to check its saved status."; }
+        catch (Exception ex) { Report(ex); }
+        finally
+        {
+            upload.Dispose(); upload = null;
+            uploading = false;
+            if (!disposed) await RefreshAsync();
+        }
+    }
+    private async Task DeleteAsync(Guid id)
+    {
+        if (deleting is not null) return;
+        deleting = id;
+        error = null;
+        try
+        {
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            await Documents.DeleteAsync(user, SessionId, id, lifetime.Token);
+            items = items.Where(d => d.Id != id).ToArray();
+        }
+        catch (OperationCanceledException) when (disposed) { }
+        catch (Exception ex) { Report(ex); }
+        finally { deleting = null; }
+    }
+    private async Task RetryAsync(Guid id)
+    {
+        try
+        {
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            await Documents.RetryAsync(user, SessionId, id, lifetime.Token);
+            await RefreshAsync();
+        }
+        catch (Exception ex) { Report(ex); }
+    }
+    private void Report(Exception ex)
+    {
+        if (disposed) return;
+        error = ex is ArgumentException or DocumentLimitException ? ex.Message : "Could not access documents. Refresh to check the saved upload status before trying again.";
+        if (ex is not (ArgumentException or DocumentLimitException)) Logger.LogError(ex, "Document operation failed for chat {SessionId}", SessionId);
+    }
+    private static string Label(ChatDocument d) => d.Status switch
+    {
+        "uploaded" => "Uploaded - original saved",
+        "uploading" => "Uploading",
+        _ => d.ErrorCode switch
+        {
+            "upload_cancelled" => "Failed - cancelled",
+            "upload_interrupted" => "Failed - interrupted or timed out",
+            "invalid_content" => "Failed - invalid file content",
+            "size_limit" => "Failed - file too large",
+            _ => "Failed - upload could not be saved"
+        }
+    };
+    private void Cancel() => upload?.Cancel();
+    public void Dispose() { disposed = true; lifetime.Cancel(); upload?.Cancel(); lifetime.Dispose(); }
+}
+

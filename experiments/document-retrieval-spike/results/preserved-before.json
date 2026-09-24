@@ -1,0 +1,222 @@
+[
+  {
+    "Path": "experiments\\embedding-spike\\.dockerignore",
+    "Sha256": "213C27CC04D415D88B6180F5565527FE6E40413355FBC647426C47F8931EC576"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\.gitignore",
+    "Sha256": "FF03EE694CEB65B50B5226DFFF1F3EC1C5A24162F89900F39EF1F283E77BD00B"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\build.log",
+    "Sha256": "061D391601F826586E5E102C68B926D5534388312D0DAF83EA142387F82E33AC"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\cases.json",
+    "Sha256": "605FD9262DC048D9405E093B813FB3434C990B217D06841BF2E0C6DE6199717F"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\docker-build.log",
+    "Sha256": "6269FE321B7F44989401A4277BF168A3097C985198DD1DEB1A136DFD3C1E2AAC"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\Dockerfile",
+    "Sha256": "229265E39660B4942DFDE198F75FAC7D952E9ADE6A1783EC6F9E6B49F8BF28EE"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\EmbeddingSpike.csproj",
+    "Sha256": "19D4A8A9B082D036FF1D26B740BE89BA36C4E1FD6DDE45B858C0D902A22099B4"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\linux-e5.log",
+    "Sha256": "548F8770517F18FBCBA57177F607DCC37600A213608DCED4FC8DDFE828623108"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\linux-minilm.log",
+    "Sha256": "84377B675234CB50F17A5D4DB9F79975C59479646A8E023E934A0AEB51C4DC50"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\models.json",
+    "Sha256": "46855C9D77891F7E0E98292B6484C4ACBD7EF0D95A98056D638099C6AE2DF826"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\nuget.config",
+    "Sha256": "03602F008D9306A7B09CFC2771DF93D4B93123B18161FDB73DDD6E574407FD69"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\OnnxEmbedder.cs",
+    "Sha256": "DBE6741B3631A5DD5793FD3D90FFFE6B48035C1B3454459A9D895C7EBCBCA86A"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\packages.lock.json",
+    "Sha256": "FEEB2D04EE08941024183F74306C353BCA5236BB1B410E6F618DF2BA2DA6BE69"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\prepare-models.py",
+    "Sha256": "646E4582CB7B277FA77A18FC7403D3E43CE849B07FED4BCBE487A5F750F6488C"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\Program.cs",
+    "Sha256": "13BA42F49E6752E42B1E65D2069AD150659023F913742EFE778034717715B2E4"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\README.md",
+    "Sha256": "2F9E021827C957CED17F0E4BD46CB0E86871B7F789126D82BD55D72A790CA898"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\regression.log",
+    "Sha256": "39184DE11BC6861E7F137F38FE5089F6220A5196626D49487C253C509B29F045"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\results-e5.log",
+    "Sha256": "AEA5B4C3197D13B5C3D0B35910B7E7F310FC10ADBF1533E08253834733D80DD4"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\results-minilm.log",
+    "Sha256": "1A580AF839B59B75912D1B68650C143B12C9CD7B83932C7FD9922D771F9F5B20"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\RESULTS.md",
+    "Sha256": "A66351842DB9B4A7CC6B65D252029531712645B7E8936EABBA389986DC612044"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\windows-e5.log",
+    "Sha256": "AB56393A11146FA5A6AFACA5733AEF2507BDDC90A3E0A3643568BDC8F27C151E"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\windows-minilm.log",
+    "Sha256": "0F54902B09B0164C40513D24A0CD2D76A1C1AA8D67C50D72706FEAE1FB590674"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\fixtures\\e5.json",
+    "Sha256": "939A15BA19333D6F1101E7DBEC513297423CAEBC0B2364960B23400BB118775F"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\fixtures\\minilm.json",
+    "Sha256": "D37841468C5E15A233561523908EB583DAF5BD09ADF22FCFEE207851C56E4136"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\results\\container-environment.txt",
+    "Sha256": "E866194E7EB4B17C7CAF8A0136CD53A040113B7304350A18134CC4DDDF4C0F36"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\results\\environment.json",
+    "Sha256": "BB1A15E2857B4B02C38E63DBC2723383EE3447F8CD6F12B5BE91510713C315F1"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\results\\linux-e5.json",
+    "Sha256": "BCA717A5081369F5B6BDB2749C6F0EE7B22CB92BACC0B08452B0F187D289D15B"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\results\\linux-minilm.json",
+    "Sha256": "AB32C705049ACFF4F86F55C31B1AF90C5D81F7E982839A1AE55421542CB8C9C2"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\results\\windows-e5.json",
+    "Sha256": "F322575A6BB5FF3996DD89BAC19D7F0C0816ECF639F41D1527CE5B5756940CEE"
+  },
+  {
+    "Path": "experiments\\embedding-spike\\results\\windows-minilm.json",
+    "Sha256": "8C5CABF00F54DBD864BFDA5A29F519D200ED02B102FD430FBED62EF0F12A0AE5"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\.gitignore",
+    "Sha256": "59FAA5A0124BF2A0461C9F09E5249BBF1511845CEBC48B8E25C33DB4F25EAA6F"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\build.log",
+    "Sha256": "75F8E4CD1DA351FC558BB3BFFC72D7BB763620639365C59FA8BC53E44752520F"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\cases.json",
+    "Sha256": "3F2124A1AAC6AF021AF55F3D57385BA45F7A86655220FB3E25ED322917145F6E"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\compose.yaml",
+    "Sha256": "4DD620089C6B4FB99E40EBCC5F60F475C83353916AF6016E685379C3E8E87E26"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\Dockerfile",
+    "Sha256": "B1B9E041AA6210023AF3F3DBFED7ECDA0A25CD75870EF8BD08C67756EBB3C08F"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\Dockerfile.dockerignore",
+    "Sha256": "B3DDBC82E7BF7632B3CBB2669B97B201B426D54786FF5EFB2F10683A97B28981"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\nuget.config",
+    "Sha256": "03602F008D9306A7B09CFC2771DF93D4B93123B18161FDB73DDD6E574407FD69"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\packages.lock.json",
+    "Sha256": "33CE2A59737E86038538B9D081BD2FC152305E1FCF313681B1E8AB8EA5717586"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\PgvectorSpike.csproj",
+    "Sha256": "3C59E166D249823C069BF47C2C6060C96A76FC8C4D3917CF72648E4C70040C0C"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\Program.cs",
+    "Sha256": "E51DF132AB617495A85735526326CD25188E3D7F4D45DEB3CE10488A2FDC0442"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\README.md",
+    "Sha256": "61649C045A6DB2FC2FBB579B814D20D98382EC9611EAF3824D93BAEFAE7FDBB0"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\RESULTS.md",
+    "Sha256": "62F1275B40FCFD37435AC40D759F3395CE4EF639121585EA2DE6403323BA906B"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\run-spike.ps1",
+    "Sha256": "48FC92D91EAF6C257382FCAD29A85F7005CA9BD5518465883AA9C55537DF2D3A"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\run.log",
+    "Sha256": "78E8504944A7309343DE510E9CFE88AB7C5060C3F830728D296FE619383895F5"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\schema.sql",
+    "Sha256": "C1CC9BE4179D8B4F9D7F608D59E1A34DC1B5D5F9B5CF61DFC49850E3755B609A"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\search.sql",
+    "Sha256": "3FC735CA5CC5EC15E2E2CC722BFE15B24529E60DA9CFC25C37C256D539E1E322"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\write-results.ps1",
+    "Sha256": "1B5F194BFB9AE4C6553818B1AB2AA743DE4DF1A2D7B2D9EA8BA7C6DEF7FDE049"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\results\\container-output.txt",
+    "Sha256": "7104F38B09F9C1353ABC3EDC25C6BB27021046EA76F974C7638080D472259D0C"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\results\\embedding-regression-linux.json",
+    "Sha256": "F52D8CE8E59BB340F130BF1932E9F66B16637B8D9352B01BAC39FADE9E9DFCBF"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\results\\embedding-regression-windows.json",
+    "Sha256": "91ACA1D445D21B7380EF640C67F15B2396255743186C3D6161D6CCF841977F36"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\results\\environment.json",
+    "Sha256": "C1B43DADE6FD24CA4351A8C1F4382ECB01390AD3A26EF3168DFC85EE6E4B90C2"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\results\\postgres-memory.json",
+    "Sha256": "E7442B3D25A07C532DE4C75B5CE84D69D07A087859D4B8C9BD4563A47CE9E995"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\results\\preservation-check.json",
+    "Sha256": "3BAAA4EC845C7B3849C03FAA0168B3159CFEE6D0C27549C07FAD36D3B57B0978"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\results\\preserved-files-before.json",
+    "Sha256": "1665DAC82C71D88BA4AD5E3F9449FE41AC8036992558D2738840E7EB4AEE410C"
+  },
+  {
+    "Path": "experiments\\pgvector-spike\\results\\retrieval.json",
+    "Sha256": "1B1FFA1B01245D7C1AEE2BC3408932AC2C1A66F1D603AAA9092836FAC7D53943"
+  }
+]

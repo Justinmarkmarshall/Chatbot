@@ -1,27 +1,56 @@
 @page "/"
-@using System.Net.Http.Json
-@using AIPlatform.Api.Models
-@inject HttpClient Http
+@page "/chat/{SessionId:guid}"
+@attribute [Authorize]
+@implements IDisposable
+@using Chatbot.Models
+@using Chatbot.Services
+@inject ChatService Chats
+@inject AuthenticationStateProvider AuthenticationState
+@inject NavigationManager Navigation
+@inject ILogger<Home> Logger
 
-<PageTitle>Ollama Chat</PageTitle>
+<PageTitle>@(active?.Title ?? "Chatbot")</PageTitle>
 
 <main class="chat-page">
-    <section class="chat-shell" aria-label="Ollama chat">
+    <section class="chat-shell" aria-label="Your chats">
         <header class="chat-header">
-            <div>
-                <p class="eyebrow">LOCAL AI</p>
-                <h1>Ollama Chat</h1>
-            </div>
-            <span class="status"><span></span> Ready</span>
+            <div><p class="eyebrow">LOCAL AI</p><h1>Ollama Chat</h1></div>
+            <a class="sign-out" href="/logout" data-enhance-nav="false">Sign out</a>
         </header>
-
-        <div class="conversation" aria-live="polite">
-            @if (messages.Count == 0)
+        <nav class="chat-tabs" aria-label="Saved chats">
+            @foreach (var session in sessions)
+            {
+                <div class="chat-tab-item">
+                    <button type="button" class="chat-tab @(active?.Id == session.Id ? "selected" : "")"
+                        aria-current="@(active?.Id == session.Id ? "page" : null)"
+                        disabled="@(isSending || loading)" @onclick="() => Select(session.Id)">@session.Title</button>
+                    <button type="button" class="chat-delete" title="Delete chat" aria-label="Delete @session.Title"
+                        disabled="@(isSending || loading)" @onclick="() => DeleteChatAsync(session.Id)">&#128465;</button>
+                </div>
+            }
+            <button type="button" class="new-chat" disabled="@(isSending || loading)" @onclick="CreateAsync">+ New chat</button>
+        </nav>
+        @if (active is not null)
+        {
+            <form class="chat-title" @onsubmit="RenameAsync" @onsubmit:preventDefault>
+                <label for="chat-title">Chat title</label>
+                <input id="chat-title" @bind="title" maxlength="120" disabled="@(isSending || loading)" />
+                <button type="submit" disabled="@(isSending || loading || string.IsNullOrWhiteSpace(title))">Save title</button>
+                <button type="button" class="cancel-button" disabled="@(isSending || loading)" @onclick="LoadAsync">Refresh</button>
+            </form>
+            <SessionDocuments @key="active.Id" SessionId="active.Id" />
+        }
+        <div class="conversation" aria-live="polite" aria-busy="@loading">
+            @if (loading)
+            {
+                <p>Loading your chats...</p>
+            }
+            else if (messages.Count == 0)
             {
                 <div class="welcome-message">
-                    <p class="eyebrow">START A CONVERSATION</p>
+                    <p class="eyebrow">@(active is null ? "YOUR SAVED CHATS" : "START A CONVERSATION")</p>
                     <h2>What are we thinking through?</h2>
-                    <p>Your messages stay between this app and your local Ollama instance.</p>
+                    <p>@(active is null ? "Choose New chat to begin. Your tabs and messages will be saved for your Google account." : "Upload documents to this chat, wait until they are ready, then ask a question. Your conversation is saved.")</p>
                 </div>
             }
             else
@@ -29,117 +58,235 @@
                 @foreach (var message in messages)
                 {
                     <article class="message @message.Role">
-                        <span class="message-role">@message.Label</span>
+                        <div class="message-heading">
+                            <span class="message-role">@(message.Role == "user" ? "YOU" : "OLLAMA")</span>
+                            <button type="button" class="message-delete" title="Delete this message" aria-label="Delete this message"
+                                    disabled="@(isSending || loading || message.Status == "streaming")" @onclick="() => DeleteMessageAsync(message.Id)">&#128465;</button>
+                        </div>
                         <p>@message.Content</p>
+                        @if (message.Sources is { Count: > 0 })
+                        {
+                            <details class="reply-sources">
+                                <summary>Document context supplied (@message.Sources.Count chunks)</summary>
+                                <ul>
+                                    @foreach (var source in message.Sources)
+                                    {
+                                        <li>
+                                            [@source.Number] <a href="@($"/api/chat/sessions/{active!.Id}/documents/{source.DocumentId}/original")" data-enhance-nav="false" download>@source.FileName</a>
+                                            @if (!string.IsNullOrWhiteSpace(source.Heading)) { <span> — @source.Heading</span> }
+                                            @if (source.PageNumber is not null) { <span> (page @source.PageNumber)</span> }
+                                        </li>
+                                    }
+                                </ul>
+                                <small>Retrieved context; citations in the answer identify the sources it used. Retrieval similarity is not confidence.</small>
+                            </details>
+                        }
+                        @if (message.Status != "completed")
+                        {
+                            <small class="message-status">@StatusLabel(message.Status)</small>
+                        }
                     </article>
                 }
             }
         </div>
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <p class="error" role="alert">@errorMessage</p>
-        }
-
+        @if (!string.IsNullOrEmpty(errorMessage)) { <p class="error" role="alert">@errorMessage</p> }
         <form class="composer" @onsubmit="SendAsync" @onsubmit:preventDefault>
             <label for="message">Message</label>
             <div class="composer-row">
-                <textarea id="message" @bind="prompt" @bind:event="oninput" placeholder="Ask anything..." rows="1" disabled="@isSending"></textarea>
-                <button type="submit" disabled="@(isSending || string.IsNullOrWhiteSpace(prompt))">
-                    Send <span aria-hidden="true">&#8599;</span>
-                </button>
-                @if (isSending)
-                {
-                    <button class="cancel-button" type="button" @onclick="Cancel">Cancel</button>
-                }
+                <textarea id="message" @bind="prompt" @bind:event="oninput" maxlength="16000" placeholder="Ask about this chat's documents..." rows="2"
+                          disabled="@(active is null || isSending || loading || HasPendingReply)"></textarea>
+                <button type="submit" disabled="@(active is null || isSending || loading || HasPendingReply || string.IsNullOrWhiteSpace(prompt))">Send <span aria-hidden="true">&#8599;</span></button>
+                @if (isSending) { <button class="cancel-button" type="button" @onclick="Cancel">Cancel</button> }
             </div>
         </form>
     </section>
 </main>
 
 @code {
-    private readonly List<ChatMessage> messages = [];
-    private string prompt = string.Empty;
+    [Parameter] public Guid? SessionId { get; set; }
+    private IReadOnlyList<ChatSession> sessions = [];
+    private ChatSession? active;
+    private List<ViewMessage> messages = [];
+    private string title = "", prompt = "";
     private string? errorMessage;
-    private bool isSending;
-    private CancellationTokenSource? cancellationTokenSource;
+    private bool loading, isSending, disposed;
+    private int loadVersion;
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? generation;
+    private bool HasPendingReply => messages.Any(m => m.Status == "streaming");
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        int version = ++loadVersion;
+        generation?.Cancel();
+        loading = true;
+        active = null;
+        messages = [];
+        errorMessage = null;
+        try
+        {
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            var saved = await Chats.ListAsync(user, lifetime.Token);
+            if (version == loadVersion && !disposed) sessions = saved;
+            Guid? selected = SessionId ?? saved.FirstOrDefault()?.Id;
+            var conversation = selected.HasValue ? await Chats.GetAsync(user, selected.Value, lifetime.Token) : null;
+            if (version != loadVersion || disposed) return;
+            sessions = saved;
+            Apply(conversation);
+            prompt = "";
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception ex) { if (version == loadVersion) ShowError(ex); }
+        finally { if (version == loadVersion) loading = false; }
+    }
+
+    private void Select(Guid id) => Navigation.NavigateTo($"/chat/{id}");
+
+    private async Task CreateAsync()
+    {
+        if (loading || isSending) return;
+        loading = true;
+        try
+        {
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            var session = await Chats.CreateAsync(user, ct: lifetime.Token);
+            Navigation.NavigateTo($"/chat/{session.Id}");
+        }
+        catch (Exception ex) { ShowError(ex); }
+        finally { loading = false; }
+    }
+
+    private async Task RenameAsync()
+    {
+        if (loading || isSending || active is null) return;
+        loading = true;
+        errorMessage = null;
+        try
+        {
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            await Chats.RenameAsync(user, active.Id, title, lifetime.Token);
+            active = active with { Title = title.Trim() };
+            sessions = await Chats.ListAsync(user, lifetime.Token);
+        }
+        catch (Exception ex) { ShowError(ex); }
+        finally { loading = false; }
+    }
+
+    private async Task DeleteChatAsync(Guid id)
+    {
+        if (loading || isSending) return;
+        bool deletingActive = active?.Id == id;
+        loading = true;
+        errorMessage = null;
+        try
+        {
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            await Chats.DeleteAsync(user, id, lifetime.Token);
+            if (deletingActive) Navigation.NavigateTo("/", replace: true);
+            else sessions = await Chats.ListAsync(user, lifetime.Token);
+        }
+        catch (Exception ex) { ShowError(ex); }
+        finally { loading = false; }
+    }
+
+    private async Task DeleteMessageAsync(Guid id)
+    {
+        if (loading || isSending || active is null) return;
+        loading = true;
+        errorMessage = null;
+        try
+        {
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            await Chats.DeleteMessageAsync(user, active.Id, id, lifetime.Token);
+            Apply(await Chats.GetAsync(user, active.Id, lifetime.Token));
+        }
+        catch (Exception ex) { ShowError(ex); }
+        finally { loading = false; }
+    }
 
     private async Task SendAsync()
     {
-        var message = prompt.Trim();
-        if (string.IsNullOrEmpty(message))
-        {
-            return;
-        }
-
-        messages.Add(new ChatMessage("user", "YOU") { Content = message });
-        prompt = string.Empty;
-        errorMessage = null;
+        if (loading || isSending || active is null || HasPendingReply || string.IsNullOrWhiteSpace(prompt)) return;
+        Guid id = active.Id;
+        string text = prompt;
         isSending = true;
-        cancellationTokenSource = new CancellationTokenSource();
-
+        errorMessage = null;
+        generation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        var token = generation.Token;
+        var assistant = new ViewMessage(Guid.Empty, "assistant", "", "streaming");
+        messages.Add(new(Guid.Empty, "user", text.Trim(), "completed"));
+        messages.Add(assistant);
+        prompt = "";
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "api/chat")
+            var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+            await foreach (string chunk in Chats.SendAsync(user, id, text, token))
             {
-                Content = JsonContent.Create(new ChatRequest(message))
-            };
-            using var response = await Http.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationTokenSource.Token);
-            if (!response.IsSuccessStatusCode)
-            {
-                errorMessage = "The chat service could not complete that request.";
-                return;
-            }
-
-            var assistantMessage = new ChatMessage("assistant", "OLLAMA");
-            messages.Add(assistantMessage);
-
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationTokenSource.Token);
-            var buffer = new byte[256];
-            while (true)
-            {
-                var bytesRead = await stream.ReadAsync(buffer, cancellationTokenSource.Token);
-                if (bytesRead == 0)
-                {
-                    break;
-                }
-
-                Console.WriteLine($"Received {bytesRead} bytes");
-                assistantMessage.Content += System.Text.Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                await InvokeAsync(StateHasChanged);
-                await Task.Yield();
-            }
-
-            if (string.IsNullOrWhiteSpace(assistantMessage.Content))
-            {
-                messages.Remove(assistantMessage);
-                errorMessage = "The chat service returned an empty response.";
+                assistant.Content += chunk;
+                if (!disposed) await InvokeAsync(StateHasChanged);
             }
         }
-        catch (HttpRequestException)
-        {
-            errorMessage = "Could not reach the chat service. Check that Ollama is running.";
-        }
-        catch (OperationCanceledException)
-        {
-        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception ex) { if (!disposed) ShowError(ex); }
         finally
         {
-            cancellationTokenSource?.Dispose();
-            cancellationTokenSource = null;
+            generation.Dispose();
+            generation = null;
             isSending = false;
+            if (!disposed && active?.Id == id)
+            {
+                try
+                {
+                    var user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+                    Apply(await Chats.GetAsync(user, id, lifetime.Token));
+                    sessions = await Chats.ListAsync(user, lifetime.Token);
+                }
+                catch (Exception ex)
+                {
+                    assistant.Status = "interrupted";
+                    ShowError(ex);
+                }
+            }
         }
     }
 
-    private void Cancel() => cancellationTokenSource?.Cancel();
-
-    private sealed class ChatMessage(string role, string label)
+    private void Apply(ChatConversation? conversation)
     {
+        active = conversation?.Session;
+        title = active?.Title ?? "";
+        messages = conversation?.Messages.Select(m => new ViewMessage(m.Id, m.Role, m.Content, m.Status) { Sources = m.Sources }).ToList() ?? [];
+    }
+    private void ShowError(Exception ex)
+    {
+        if (disposed) return;
+        errorMessage = ex switch
+        {
+            ChatNotFoundException => "This chat is unavailable. Choose one of your saved chats or create a new one.",
+            ChatBusyException => ex.Message,
+            ArgumentException => ex.Message,
+            UnauthorizedAccessException => "Your sign-in is no longer available. Sign in again.",
+            _ => "The operation could not be completed. Refresh to check saved messages before sending again."
+        };
+        if (ex is not (ChatNotFoundException or ChatBusyException or ArgumentException or UnauthorizedAccessException))
+            Logger.LogError(ex, "Chat operation failed");
+    }
+    private static string StatusLabel(string status) => status switch
+    {
+        "streaming" => "Reply in progress. If this is another browser tab, refresh when it finishes.",
+        "cancelled" => "Cancelled - partial reply saved.",
+        "failed" => "Reply failed - any partial response is saved.",
+        _ => "Interrupted - this reply did not finish."
+    };
+    private void Cancel() => generation?.Cancel();
+    public void Dispose() { disposed = true; lifetime.Cancel(); generation?.Cancel(); lifetime.Dispose(); }
+    private sealed class ViewMessage(Guid id, string role, string content, string status)
+    {
+        public Guid Id { get; } = id;
         public string Role { get; } = role;
-        public string Label { get; } = label;
-        public string Content { get; set; } = string.Empty;
+        public string Content { get; set; } = content;
+        public string Status { get; set; } = status;
+        public IReadOnlyList<DocumentSource>? Sources { get; init; }
     }
 }

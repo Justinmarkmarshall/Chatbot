@@ -1,0 +1,16 @@
+{
+  "corpusVersion": "1",
+  "description": "Authored synthetic Cedar workshop documents. Fixed evaluation data, not authoritative operational, electrical, gardening or travel advice.",
+  "documents": [
+    { "id": "postgres-backup", "file": "postgres-backup-and-restore.md" },
+    { "id": "deployments", "file": "kubernetes-deployments.md" },
+    { "id": "services", "file": "kubernetes-services.md" },
+    { "id": "gateway", "file": "gateway-api-routing.md" },
+    { "id": "observability", "file": "observability-runbook.md" },
+    { "id": "password", "file": "password-recovery.md" },
+    { "id": "solar", "file": "solar-panels.md" },
+    { "id": "bread", "file": "bread-making.md" },
+    { "id": "tomatoes", "file": "tomato-growing.md" },
+    { "id": "trains", "file": "train-travel-guide.md" }
+  ]
+}

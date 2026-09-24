@@ -1,0 +1,12 @@
+{{- if ne .Values.service.type "ClusterIP" -}}
+{{- fail "service.type must be ClusterIP; expose only through HTTPRoute" -}}
+{{- end -}}
+{{- if not .Values.dataProtection.persistence.enabled -}}
+{{- fail "dataProtection.persistence.enabled must remain true for persistent login keys" -}}
+{{- end -}}
+{{- if gt (int .Values.documentProcessing.replicaCount) 1 -}}
+{{- fail "documentProcessing.replicaCount must be 0 or 1: this chart intentionally runs one serial worker" -}}
+{{- end -}}
+{{- if .Values.ollama.deploy.enabled -}}
+{{- fail "This deployment uses an existing Ollama workload; set ollama.deploy.enabled=false and configure ollama.baseUrl. Review the documented legacy-release migration before upgrading." -}}
+{{- end -}}

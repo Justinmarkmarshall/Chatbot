@@ -1,0 +1,79 @@
+[
+  {
+    "TimestampUtc": "2026-09-23T11:33:14.6081751Z",
+    "Phase": "idle-before-regression",
+    "Available": true,
+    "CurrentBytes": 69160960,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:24.9182462Z",
+    "Phase": "idle-before-retrieval",
+    "Available": true,
+    "CurrentBytes": 52932608,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:26.2049266Z",
+    "Phase": "during-runner",
+    "Available": true,
+    "CurrentBytes": 52764672,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:27.4706088Z",
+    "Phase": "during-runner",
+    "Available": true,
+    "CurrentBytes": 52805632,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:28.7337714Z",
+    "Phase": "during-runner",
+    "Available": true,
+    "CurrentBytes": 53104640,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:29.9844513Z",
+    "Phase": "during-runner",
+    "Available": true,
+    "CurrentBytes": 53112832,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:31.2136196Z",
+    "Phase": "during-runner",
+    "Available": true,
+    "CurrentBytes": 52772864,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:32.4375559Z",
+    "Phase": "during-runner",
+    "Available": true,
+    "CurrentBytes": 57688064,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:33.676016Z",
+    "Phase": "during-runner",
+    "Available": true,
+    "CurrentBytes": 62820352,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:34.8802641Z",
+    "Phase": "during-runner",
+    "Available": true,
+    "CurrentBytes": 57393152,
+    "KernelLifetimePeakBytes": 83533824
+  },
+  {
+    "TimestampUtc": "2026-09-23T11:33:35.11049Z",
+    "Phase": "after-runner",
+    "Available": true,
+    "CurrentBytes": 57409536,
+    "KernelLifetimePeakBytes": 83533824
+  }
+]

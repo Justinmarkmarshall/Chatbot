@@ -1,0 +1,4 @@
+corpus/*.md text eol=lf
+corpus/manifest.json text eol=lf
+cases.json text eol=lf
+search.sql text eol=lf

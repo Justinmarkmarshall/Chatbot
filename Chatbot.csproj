@@ -4,9 +4,30 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>Chatbot-Google-Authentication</UserSecretsId>
+    <DefaultItemExcludes>$(DefaultItemExcludes);experiments/**;tests/**;model-assets/**</DefaultItemExcludes>
   </PropertyGroup>
 
+  <!-- Standalone experiments must not compile into or ship with the web app. -->
   <ItemGroup>
+    <Compile Remove="experiments/**" />
+    <Content Remove="experiments/**" />
+    <None Remove="experiments/**" />
+    <EmbeddedResource Remove="experiments/**" />
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <None Remove="tests/**" />
+    <EmbeddedResource Remove="tests/**" />
+    <EmbeddedResource Include="Persistence/Migrations/*.sql" />
+    <EmbeddedResource Include="Processing/minilm.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Marshall.Authentication.Google" Version="1.0.0" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.30.0" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets" Version="10.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.17.2" />

@@ -1,8 +1,20 @@
 replicaCount: 1
 
+# Provision PostgreSQL separately. Never put credentials in Helm values.
+database:
+  existingSecret: ""
+  connectionStringKey: connection-string
+  # Used when existingSecret (a complete connection string) is empty.
+  host: chatbot-postgres
+  port: 5432
+  name: chatbot
+  username: chatbot
+  passwordSecret: chatbot-postgres-auth
+  passwordKey: password
+
 image:
   repository: ghcr.io/justinmarkmarshall/chatbot
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   tag: latest
 
 service:
@@ -12,18 +24,18 @@ service:
 
 ollama:
   model: qwen3:1.7b
-  # Leave baseUrl empty to use the in-cluster Ollama deployed below.
-  # Set it (e.g. http://my-gpu-host:11434) to use an external Ollama instead.
-  baseUrl: ""
+  # Use the existing Ollama Service; this chart does not deploy Ollama.
+  # For another namespace use its full cluster DNS name.
+  baseUrl: "http://ollama:11434"
   deploy:
-    enabled: true
+    enabled: false
     image:
       repository: ollama/ollama
       tag: latest
       pullPolicy: IfNotPresent
     port: 11434
     # Pull .Values.ollama.model on pod start (cached on the PVC).
-    pullModel: true
+    pullModel: false
     persistence:
       enabled: true
       size: 5Gi
@@ -65,4 +77,28 @@ httpRoute:
     # backendRequest caps time waiting for the backend per attempt.
     # backendRequest: "0s"
      
-resources: {}
+imagePullSecrets: []
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 768Mi
+authentication:
+  # Existing Secret with client-id and client-secret keys.
+  existingSecret: chatbot-google-auth
+
+# Requires pgvector on the existing PostgreSQL server and provisioned offline model files.
+documentProcessing:
+  enabled: true
+  # Optional legacy model PVC override. New images already contain /model-assets.
+  modelExistingClaim: ""
+  modelRoot: /model-assets
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi

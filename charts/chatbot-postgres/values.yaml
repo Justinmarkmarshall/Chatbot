@@ -1,0 +1,21 @@
+fullnameOverride: ""
+image:
+  repository: pgvector/pgvector
+  tag: 0.8.6-pg17-bookworm
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+database:
+  name: chatbot
+  username: chatbot
+  existingSecret: chatbot-postgres-auth
+  passwordKey: password
+persistence:
+  size: 10Gi
+  storageClass: ""
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi

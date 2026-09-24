@@ -14,20 +14,13 @@ public sealed class OllamaClient(
     private readonly OllamaOptions _options = options.Value;
 
     public async IAsyncEnumerable<string> StreamChatAsync(
-        string message,
+        IReadOnlyList<Chatbot.Models.ConversationMessage> messages,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var request = new
         {
             model = _options.Model,
-            messages = new[]
-            {
-                new
-                {
-                    role = "user",
-                    content = message
-                }
-            },
+            messages,
             stream = true
         };
 
@@ -48,10 +41,13 @@ public sealed class OllamaClient(
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
         {
             var result = JsonSerializer.Deserialize<OllamaChatResponse>(line);
-            if (!string.IsNullOrEmpty(result?.Message.Content))
+            if (!string.IsNullOrEmpty(result?.Error)) throw new HttpRequestException("Ollama reported a generation error.");
+            if (!string.IsNullOrEmpty(result?.Message?.Content))
             {
                 yield return result.Message.Content;
             }
+            if (result?.Done == true) yield break;
         }
+        throw new IOException("Ollama closed the response before completion.");
     }
 }
